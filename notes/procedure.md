@@ -112,3 +112,35 @@ from the original handoff:
 - Samsung DSU-not-supported confirmation (Samsung Members forum threads, multiple devices/years)
 - XDA "Any custom os?" thread for the Fold3 — one post, May 2025, no replies. Confirms the
   scene really is this quiet: https://xdaforums.com/t/any-custom-os.4735111/
+
+## Patch run log (2026-09-23)
+
+Ran the raidenii/recv-vbmeta-patcher scripts locally (not GitHub Actions) against the
+F926BXXSIJZE5 firmware's `recovery.img.lz4` + `vbmeta.img.lz4`. Source scripts reviewed
+before running — they wrap Magisk's `magiskboot` and Google's own `avbtool`, plus a small
+`vbmeta-disable-verification` utility; no networking, no obfuscation.
+
+- `patch-vbmeta.sh`: flipped the AVB verification-disable flag. Clean, one-line success.
+- `patch-recovery.sh`: unpacked the recovery boot image (confirmed `cpuinfo.chipname=SM8350`
+  in the kernel cmdline — right chipset), extracted `system/bin/recovery`, ran ~18 candidate
+  hex patches against it (a hexpatch is a no-op if its byte pattern isn't found — expected,
+  since the patterns cover many Samsung recovery binary variants). **One pattern matched**:
+  `Patch @ 0x0004C3FC [080109aae80000b4] -> [080109aae80000b5]` — this flips the branch
+  condition that normally gates fastbootd access behind an ENG-build check. Repacked and
+  re-signed with a throwaway key via `avbtool add_hash_footer` (fine — vbmeta verification
+  is disabled anyway, this just gives the partition a well-formed AVB footer).
+- `pack-odin.sh`: repacked both patched images and produced a valid Odin `.tar.md5`.
+
+**Output**: `build/output/patched-recovery-vbmeta-F926BXXSIJZE5.tar.md5` (~48MB). Contains
+`recovery.img.lz4` (patched, fastbootd-unlocked) + `vbmeta.img.lz4` (verification disabled).
+Built from the F926BXXSIJZE5 base (not the phone's exact current F926BXXSJJZH3 build) —
+same major Android 15 release, so this should be flashable without an anti-rollback
+conflict, but hasn't been tested against the real device yet.
+
+**Not yet done / still ahead**: flashing this via Odin (AP slot, Auto Reboot disabled),
+manually booting to recovery, confirming the "Enter Fastboot" menu option actually appears
+(this is the real test of whether the one matched hexpatch was the right one for this
+device/build), then GSI flashing per the steps above. Only one hex pattern matched, so if
+"Enter Fastboot" doesn't show up after flashing, that's the next thing to debug — may need
+to try patching against the exact current firmware once available, or check if a different
+recovery binary offset needs patching for this specific build.
