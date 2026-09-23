@@ -21,10 +21,8 @@ Device: Samsung Galaxy Z Fold3, SM-F926B (Australian variant), codename **q2q**,
   [BiTGApps](https://bitgapps.io) (Core variant) booting cleanly. Confirmed working: WiFi,
   Bluetooth, both cameras, haptics, mobile data, **Play Store/Google Play Services**. Broken:
   fingerprint (expected — matches the established Android-14-only pattern from research),
-  audio/speakers (new, not yet investigated), and — the current focus — **only the inner
-  screen works; the outer/cover screen stays frozen on the boot logo**, since a generic GSI
-  has zero foldable-aware display-switching logic. Full writeup, including the multi-hour
-  GApps SetupWizard-crash saga and its fix, in
+  audio/speakers (not yet investigated). Full writeup, including the multi-hour GApps
+  SetupWizard-crash saga and its fix, in
   [notes/procedure.md](notes/procedure.md#success-android-16-lineageos-232-booting-with-working-gapps-2026-09-24).
 - Evolution X 9.9.3 (Android 14) was the first GSI that booted at all, earlier in the same
   session — still on disk, useful as a fallback: has working audio and (per the Android-14
@@ -32,17 +30,23 @@ Device: Samsung Galaxy Z Fold3, SM-F926B (Australian variant), codename **q2q**,
 - **Calls don't work** on any build tried — Samsung's IMS stack is proprietary and the
   standard community VoLTE fix explicitly doesn't support Samsung devices. Unsolved,
   deprioritized for now.
-- **Next goal (not yet started): get both screens working.** This needs real foldable-aware
-  device-tree/kernel work (display-switching HAL, dual brightness, fold-state sensor
-  integration) — a GSI fundamentally can't do this, no matter which one we pick. The only
-  known reference for someone getting this specific device's dual-screen switching working is
-  the abandoned [Pixel Experience WIP thread](https://xdaforums.com/t/pixel-experience-running-on-my-fold-3-wip-development.4483239/)
-  (2022-23) — got inner+outer switching, brightness, RIL, camera, and charging all working
-  via a proper device tree, but the build was never released and the developer vanished. That
-  thread (and Azkali's own `android_device_samsung_q2q` / kernel repos on
-  [GitLab](https://gitlab.com/azkali-samsung/q2q)) are the starting points to study — this is
-  a meaningfully bigger undertaking than anything done so far (building/adapting a real
-  device tree, not just flashing a pre-built image).
+- **Dual-screen display switching: SOLVED.** Turns out a GSI *can* do this — Android's
+  native `DeviceStateManager`/`DisplayManager` foldable support is genuine AOSP
+  infrastructure (not Pixel-exclusive), and since our GSI flashes only ever replace
+  `system`, Samsung's own real device-state and display-layout configs were sitting
+  untouched in `vendor` the whole time. Fixed by editing
+  `/vendor/etc/devicestate/device_state_configuration.xml` to drop a `<lid-switch>`
+  condition that's permanently stuck (structurally made `CLOSE` unreachable), keeping only
+  the working Samsung sensor-based check. **Confirmed both directions** via `dumpsys
+  device_state`/`dumpsys display`, and visually — the outer screen actually renders content
+  now. Full technical writeup (including two nasty ext4-on-Samsung-images gotchas) in
+  [notes/procedure.md](notes/procedure.md#dual-screen-fix-2-display-switching-fully-working-2026-09-24).
+- **New follow-on problem, precisely diagnosed**: the outer **touchscreen** produces zero
+  raw input events at the kernel level (confirmed via `getevent`) even though the display
+  itself is correctly active — a kernel-level touch-IC power-management issue, separate
+  from and deeper than the display fix. Next session's starting point — see
+  [notes/procedure.md](notes/procedure.md) for what's been ruled out already (it's not a
+  display-association config problem, those are correct and untouched).
 - All work pushed to a private GitHub repo: https://github.com/jaso1000/Fold3-LineageOS
 
 Original research below is still accurate background context.

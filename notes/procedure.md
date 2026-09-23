@@ -474,3 +474,59 @@ be toggled manually as confirmation/workaround, or whether the kernel source
 (`cawilliamson/android_kernel_samsung_q2q` / `tgy778/q2q`, both linked from earlier research)
 has an obvious driver-level dependency on the same broken lid-switch/hall-effect signal we
 bypassed only at the Android framework layer, not the kernel layer.
+
+## Touch problem: traced precisely into kernel driver logic (2026-09-24)
+
+Cloned `cawilliamson/android_kernel_samsung_q2q` locally and traced the actual touch-power
+state machine (device uses the `stm_fold` variant of Samsung's `sec_input` framework —
+confirmed by matching kernel log messages and the `stm_ts_spi`/`i2c-66` device paths seen
+earlier).
+
+### Confirmed: a real, independent kernel-level fold-detection chain exists
+
+`stm_hall_ic_notify()` (a hall-sensor notifier callback, entirely separate from anything we
+touched in the Android framework) → sets `ts->flip_status_current` → schedules
+`stm_switching_work()` → calls `stm_chk_tsp_ic_status(ts, STM_TS_STATE_CHK_POS_HALL)`. All
+of this fires already, independent of our `device_state_configuration.xml` fix — confirmed
+via the `stm_chk_tsp_ic_status: START: pos[...] power_state[...] ...folding` log lines we'd
+already captured earlier in the session.
+
+### The exact gating condition that's very likely blocking SUB (outer) touch power-on
+
+Inside `stm_chk_tsp_ic_status()` (`drivers/input/sec_input/stm_fold/stm_fn.c:1594`), the
+`SUB_TOUCH` + `STM_TS_STATE_CHK_POS_HALL` branch only calls `start_device()` (powers on the
+touch IC) when **all three** are true: `power_state == SEC_INPUT_STATE_POWER_OFF`,
+`flip_status_current == STM_TS_STATUS_FOLDING`, **and `lowpower_mode != 0`**. If
+`lowpower_mode` is 0 (its default/init value per `stm_core.c:1470`,
+`ts->plat_data->lowpower_mode = false`), **every branch falls through to "nothing"** — the
+SUB touch IC would just stay off permanently regardless of fold state, matching exactly
+what we observed (zero raw `getevent` output).
+
+`lowpower_mode` is normally set by a Samsung/One-UI-specific framework path (tied to
+Always-On-Display / wake-gesture settings) that a generic LineageOS almost certainly never
+calls — no setter for it was found anywhere in this driver beyond the `false` initializer,
+consistent with it needing to come from outside the driver (a HAL/framework call this GSI
+doesn't make). Not yet confirmed live (see below), but a strong, well-supported theory.
+
+### Live confirmation blocked tonight: `adb root` broke repeatedly
+
+Wanted to watch `dmesg` live during a fold to confirm the theory concretely, but `adb root`
+(needed since `dmesg` requires privileges the plain shell user doesn't have, and this build
+has no `su` binary at all) failed to successfully restart adbd and reconnect **four times in
+a row** — including one episode where the device became fully unresponsive and needed a
+manual reboot. This looks like a genuine limitation of this specific GSI build's root-adbd
+handling, not a fluke — worth trying a different approach next time (e.g., a proper rooted
+boot image via Magisk, rather than relying on `adb root`) rather than repeating the same
+failing step.
+
+### Next steps (not yet attempted)
+
+1. Get reliable root shell access (Magisk-patched boot image is probably more reliable than
+   fighting `adb root` on this GSI) and watch live `dmesg`/the driver's own `input_info` log
+   lines during a fold to confirm the `lowpower_mode` theory concretely.
+2. If confirmed, either: (a) find/trigger whatever call is supposed to set `lowpower_mode`
+   (may be exposed via a HIDL/AIDL vendor service, not a plain sysfs node — none of the
+   `tsp1`/`tsp2` sysfs attributes we found on the live device look like a direct setter for
+   it), or (b) as a blunter workaround, patch the kernel driver's default init value directly
+   (`stm_core.c:1470`) and rebuild — a much bigger undertaking (full kernel build, not just
+   flashing a pre-built image) than anything done in this session so far.
