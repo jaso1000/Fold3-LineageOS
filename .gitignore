@@ -1,0 +1,6 @@
+# Firmware extracts and build artifacts — large binaries, proprietary, don't belong in git
+build/
+*.img
+*.img.lz4
+*.tar.md5
+*.zip
