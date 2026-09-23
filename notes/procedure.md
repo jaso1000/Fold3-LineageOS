@@ -416,3 +416,61 @@ Confirmed via `dumpsys display`: inner display stayed `ON`/active, outer stayed
 3. Once state detection correctly lands on CLOSE when closed, re-test whether
    `display_layout_configuration.xml`'s existing CLOSE→outer-display mapping actually takes
    effect (untested so far, since detection never correctly reached CLOSE).
+
+## Dual-screen fix #2: display switching FULLY WORKING (2026-09-24)
+
+Following on from fix attempt #1 (which got state detection responding but stuck on TENT
+with no display mapping): found and fixed the actual remaining bug.
+
+### Root cause: AND-gated lid-switch condition, and our lid-switch is permanently broken
+
+Each state in the `sec/device_state_configuration.xml` requires **both** a `<lid-switch>`
+condition AND a `<sensor>` condition (AND logic). CLOSE specifically requires
+`lid-switch open=FALSE`. Confirmed via `dumpsys device_state` that `mIsLidOpen` stays `true`
+permanently regardless of physical fold state on this device/GSI combo — a separate, deeper
+bug we didn't chase (possibly the input subsystem's SW_LID switch event genuinely isn't wired
+up by this kernel/GSI combination). Since CLOSE is the only state requiring `lid-switch=FALSE`
+and TENT/HALF_FOLDED/OPEN all require `lid-switch=TRUE`, **CLOSE was structurally unreachable**
+regardless of what the sensor reported — explaining why folding closed landed on TENT instead.
+
+**Fix**: edited `device_state_configuration.xml` to drop the `<lid-switch>` condition
+entirely from all four sensor-based states, leaving only the `<sensor>` check (which we'd
+already confirmed responds correctly to physical folding). Same rm+mv-free-space workaround
+as before for getting the edit onto a copy of `vendor.img`, except this time we needed
+genuinely new content (not just a same-filesystem rename), which required actually solving
+the mysterious "0 bytes available despite free blocks" ext4 issue — worked around (not
+understood) by growing the image by a small amount (65536 bytes, safely under the ~72KB
+slack before hitting "image larger than target device") via `truncate`+`resize2fs`, which
+unlocked real writable space (`stat -f` went from `Available: 0` to `Available: 8237` blocks)
+for reasons not fully diagnosed.
+
+### Result: CONFIRMED WORKING both directions
+
+`dumpsys device_state` with phone closed: `mCommittedState=CLOSE`, `mIsLidOpen=null` (no
+longer checked). `dumpsys display`: outer display (`...155`) `state ON, isActive=true`;
+inner (`...154`) `state OFF, isActive=false`. **User visually confirmed content actually
+rendering on the outer screen** — first time this session. Foldable-aware display switching
+via native AOSP `DeviceStateManager` is fully functional on this device with these two
+vendor config edits.
+
+## New, separate problem found: outer touchscreen has zero input, at the kernel level
+
+With the display correctly switched to the outer screen, touch input doesn't work on it.
+Diagnosed precisely — **not** an Android input-routing/display-association config issue:
+
+- `/vendor/usr/idc/sec_touchscreen.idc` → `touch.displayId = local:...154` (inner)
+- `/vendor/usr/idc/sec_touchscreen2.idc` → `touch.displayId = local:...155` (outer)
+
+Both correct, untouched, present. Both touch controllers (`sec_touchscreen`/event14,
+`sec_touchscreen2`/event11) are enumerated as kernel input devices via `getevent -lp`. But
+`adb shell getevent -l /dev/input/event11` while tapping the outer screen produced **zero
+events** — the touch IC itself isn't sending any data at the kernel level. This is a genuinely
+different, deeper problem than the display fix: something (likely kernel driver power
+management for the touch chip, gated on its own internal fold-state tracking that's separate
+from Android's DeviceStateManager) isn't powering on/enabling the outer touch controller.
+
+Not yet investigated: whether there's a sysfs power-control node for the touch IC that could
+be toggled manually as confirmation/workaround, or whether the kernel source
+(`cawilliamson/android_kernel_samsung_q2q` / `tgy778/q2q`, both linked from earlier research)
+has an obvious driver-level dependency on the same broken lid-switch/hall-effect signal we
+bypassed only at the Android framework layer, not the kernel layer.
