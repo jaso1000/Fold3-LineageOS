@@ -237,3 +237,56 @@ devices** — Samsung uses a proprietary, non-standard IMS implementation that d
 the protocols that mod relies on. Getting calls working would need pulling Samsung's own
 proprietary IMS APK/config from stock firmware and manually integrating it — no documented
 recipe found for this yet. Logged as a known limitation, not pursued further for now.
+
+## SUCCESS: Android 16 (LineageOS 23.2) booting with working GApps (2026-09-24)
+
+After extensive troubleshooting (see below), got a stable, working Android 16 boot with
+functional Google Play Services/Play Store — genuinely the target outcome.
+
+### The problem that blocked this for hours: SetupWizard ANR
+
+Every attempt to add Google apps to the LineageOS 23.2 GSI hit **"Android Setup isn't
+responding"** — confirmed across three different installation methods:
+1. LineageOS's own baked-in GAPPS-EXT4-GSI build (built-in at the source).
+2. TWRP zip-install of MindTheGapps 16.0.0 (once we fixed the underlying filesystem-space
+   issue that caused the *first* zip-flash attempt to silently fail).
+3. Manual PC-side integration of MindTheGapps into the system image (which additionally
+   required fixing two rounds of missing/over-broad SELinux `security.selinux` xattr issues
+   — `cp` and `sed -i` both silently drop xattrs; `setfattr -h -n security.selinux -v
+   'u:object_r:system_file:s0'` on exactly the added files, not the whole tree, was the fix
+   for that specific bug, and it did get further — past an earlier hwservicemanager hang —
+   but still hit the identical SetupWizard ANR).
+
+Same crash, three unrelated install mechanisms → concluded this is a genuine incompatibility
+between **MindTheGapps 16.0.0 specifically** and this LineageOS 23.2 GSI/device combo, not
+an installation-mechanics bug. Vanilla LineageOS 23.2 (no GApps at all) was, notably, the
+*only* completely clean boot through setup we ever got — strong signal the base OS itself is
+fine.
+
+### The fix: switch GApps package to BiTGApps (Core variant)
+
+https://bitgapps.io — a different GApps packaging project. Its installer **does not install
+Google's SetupWizard component by default** (it's bundled in the zip but only activated via
+an opt-in config file we didn't provide) — this sidesteps the crash entirely rather than
+working around it. Used the "Core" variant (smallest: GMS + GSF + Play Store + essentials,
+~125MB zip) for Android 16.0, arm64, from
+https://bitgapps.io (variant=CORE, platform=ARM64, version=16.0).
+
+### Working recipe (repeatable)
+
+1. Flash a **freshly-grown** (via `truncate` + `resize2fs`, ~1.7GB headroom) Vanilla
+   LineageOS 23.2 EXT4 GSI as System Image — do NOT use the space-exhausted stock-sized
+   vanilla image, the GApps zip install needs free space to write into.
+2. Flash `BiTGApps-arm64-16.0.0-*-CORE.zip` via TWRP's normal **Install** (zip) — do NOT try
+   to manually splice files on the PC; TWRP's own installer handles SELinux
+   context/permissions correctly, which our manual attempts had to hand-fix repeatedly.
+3. Format Data, reboot to System.
+
+### First-boot results on this recipe
+
+Working: WiFi, Bluetooth, both cameras (inner + outer!), haptics, **Play Store/GMS**.
+Not working: **audio/speakers** (new — different from the Evolution X result, worth
+investigating separately), fingerprint (expected — matches the established Android-14-only
+fingerprint pattern from the S21 5G Snapdragon precedent thread).
+Not yet tested: mobile data, calls (expect calls to still need the Samsung-proprietary-IMS
+fix noted earlier, independent of GApps).
