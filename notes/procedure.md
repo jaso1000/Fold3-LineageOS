@@ -185,3 +185,39 @@ normally-booted system (not navigating the recovery UI) may reach fastbootd dire
 boot-reason flag, per a same-symptom report in
 https://github.com/Johx22/Patch-Recovery/issues/8 (unresolved in that thread, but worth
 testing here). Not yet tested against this device.
+
+## First successful GSI boot (2026-09-23)
+
+Evolution X 9.9.3 (Android 14, `evolution_arm64_bgN_slim`) booted successfully on q2q —
+likely a first for this device. Full pipeline that got us here:
+
+1. Confirmed our own current-firmware recovery hexpatch (raidenii/recv-vbmeta-patcher)
+   does **not** work on this device/firmware — no fastboot exposure via any method tried.
+2. Found and flashed Azkali's actual TWRP build (via bm0x/twrp-actions-compiler CI mirror,
+   since Azkali's own wiki distribution point is down) — genuinely boots and works despite
+   being a ~3-year-old (2023) build against current Sept 2026 firmware. No ARB issues
+   encountered.
+3. Patched that TWRP with DynaPatch (Yillié, v2.1) to add "Install Image" support for
+   logical/dynamic partitions — this is what actually let us target the System partition
+   without needing fastboot at all.
+4. Pushed the GSI via `adb push` to `/tmp` (RAM-backed tmpfs in recovery, ~5.2GB available —
+   plenty for a 3.6GB image), flashed via Install → Install Image → System Image.
+5. Format Data (plain reformat, works fine despite TWRP being unable to *mount*/decrypt
+   the existing Data partition — that's a separate, unrelated limitation).
+6. Reboot to System — booted successfully.
+
+**Note**: TWRP backup was attempted first but failed completely — `unable to override
+ro.crypto.dm.default_key`, a hard decryption incompatibility between this old TWRP build
+and current Android 15 Samsung encryption. Not fixable with this recovery. Skipped backup
+entirely; relied on the already-downloaded full stock firmware as the restore path instead
+(never needed it).
+
+**First-boot results**:
+- Working: WiFi, haptics, volume/speaker audio, **fingerprint**, Bluetooth.
+- Not working: **outer/cover screen** (expected — this is a generic GSI with zero
+  foldable-aware logic, exactly the limitation flagged going in).
+- Issue: some UI scaling problems on first boot (unsurprising for the same reason).
+- Not yet tested: cellular (calls/SMS/data), camera, wireless/reverse charging.
+
+Fingerprint working matches the S21 5G Snapdragon thread's finding that Android-14-based
+GSIs specifically keep fingerprint functional on this SoC family — consistent result.
