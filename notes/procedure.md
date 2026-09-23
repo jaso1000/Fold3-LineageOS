@@ -356,3 +356,63 @@ mechanism should work for a vendor-partition edit, same as we've been doing for 
 state detection itself works, still need to verify the display-switching handoff itself
 (`display_layout_configuration.xml` → SurfaceFlinger) — untested since state detection never
 got that far.
+
+## Dual-screen fix attempt #1: partial success (2026-09-24)
+
+Replaced `/vendor/etc/devicestate/device_state_configuration.xml` (plain, lid-switch-based)
+with the content of `/vendor/etc/devicestate/sec/device_state_configuration.xml` (Samsung's
+real, sensor-based, 6-state config) on a copy of the stock `vendor.img`, then flashed it via
+DynaPatch's Install Image → "Vendor image" target (no data wipe needed — vendor changes
+don't affect userdata).
+
+### How: two real gotchas hit and fixed along the way
+
+1. **DynaPatch's Install Image does NOT auto-grow the target logical partition** — unlike
+   what we assumed from the `system` partition experience (which had already grown from
+   repeated earlier flashes). Tried growing the vendor image via `truncate`+`resize2fs` the
+   same way as for `system` and got "size of image is larger than target device" — the
+   vendor logical partition was still stock-sized (~2033.75 MiB) with only ~72KB of slack.
+2. **The stock `vendor.img`'s ext4 filesystem reports 0 bytes available for writes**
+   (`stat -f` shows `Available: 0`) despite `dumpe2fs` showing thousands of nominally free
+   blocks and `Reserved block count: 0` — an unresolved discrepancy, didn't chase it further.
+   Workaround: sidestep needing any free space at all — `rm` the old (smaller) file and `mv`
+   the `sec/` file over it, a same-filesystem rename needs zero additional block allocation.
+   Reset the moved file's SELinux context to match (`u:object_r:vendor_configs_file:s0`,
+   confirmed via `getfattr` beforehand — turned out to already match, no actual mismatch this
+   time, unlike the earlier `system`-partition xattr bugs).
+
+### Result: device-state detection now genuinely responds to folding — real progress
+
+Confirmed via `adb shell dumpsys device_state`:
+- Before the fix: folding the phone closed did nothing —
+  `mCommittedState` stuck on `OPEN`, `mIsLidOpen` stuck `true`, no sensor data at all.
+- After the fix: folding the phone closed changed `mCommittedState` to **`TENT`**
+  (identifier 1) and populated real sensor readings (`lid_angle_fusion Wakeup: [0.0, 10.0,
+  10.0, 3.0, ...]`, vs. `[3.0, 177.0, 177.0, ...]` while open — clearly responsive to the
+  physical fold).
+
+### Remaining gap: landed on TENT, not CLOSE, and no display mapping exists for TENT
+
+The `sec/` config's thresholds (`CLOSE`: angle ≤0.9, `TENT`: 1.0-1.9, `HALF_FOLDED`:
+2.0-2.9, `OPEN`: ≥3.0) don't match whatever units/index the live sensor array is actually
+reporting for "current angle" — landed in the TENT bucket instead of CLOSE when the phone
+was flat closed. Separately, `display_layout_configuration.xml` only has explicit
+`<layout>` entries for states **0 (CLOSE)** and **3 (OPEN)** — nothing for TENT/HALF_FOLDED
+— so even with correct state detection, DisplayManager has no rule to act on for whatever
+state actually gets picked, and it silently keeps the previous (inner) display active.
+Confirmed via `dumpsys display`: inner display stayed `ON`/active, outer stayed
+`OFF`/inactive, even after the state change to TENT.
+
+### Next steps (not yet attempted)
+
+1. Figure out which of the 16 values in the `lid_angle_fusion` sensor array is actually the
+   "current fold angle" the config's thresholds are meant to compare against (vs. history/
+   other channels) — may need to watch the array across a slow, deliberate fold-close to see
+   which index moves smoothly from ~177 (open) down to ~0 (closed).
+2. Either recalibrate the CLOSE/TENT/HALF_FOLDED thresholds to match whatever that value's
+   actual range turns out to be, or check if there's a scaling factor
+   (raw-sensor-units-to-degrees) expected elsewhere (a HAL config, not this XML) that our GSI
+   setup is missing.
+3. Once state detection correctly lands on CLOSE when closed, re-test whether
+   `display_layout_configuration.xml`'s existing CLOSE→outer-display mapping actually takes
+   effect (untested so far, since detection never correctly reached CLOSE).
