@@ -58,3 +58,14 @@ F926BXXSJJZH3
 0
 1
 ```
+
+## Firmware downloaded for recovery-patching
+
+`F926BXXSIJZE5_F926BOXMIJZE5_F926BXXSIJZE5_XSA.zip` (9.2GB) downloaded to
+`~/Downloads/`, MD5 verified against SamMobile's published checksum
+(`da063969173029513184c25858d24e77`) — confirmed intact 2026-09-23.
+
+This is the XSA (Australia, unbranded) build of F926BXXSIJZE5, Android 15, security patch
+2026-05-05 — **not an exact match** to the phone's current build (F926BXXSJJZH3, Sept 2026)
+but same major Android 15 release, from a trusted source. See procedure.md for the
+recovery/vbmeta patching plan using this file.
