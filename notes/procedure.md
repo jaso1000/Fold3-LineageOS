@@ -221,3 +221,19 @@ entirely; relied on the already-downloaded full stock firmware as the restore pa
 
 Fingerprint working matches the S21 5G Snapdragon thread's finding that Android-14-based
 GSIs specifically keep fingerprint functional on this SoC family — consistent result.
+
+## Full first-boot results (Evolution X 9.9.3) and known limitation: calls
+
+Working: WiFi, haptics, audio, fingerprint, Bluetooth, inner **and outer** camera, mobile
+data over SIM.
+Not working: calls don't go through (data works, voice doesn't) — some UI scaling issues
+on the foldable inner display (expected, generic GSI has no foldable awareness). Outer
+screen itself doesn't work as a display (also expected).
+
+**Root cause for calls, researched**: this isn't a generic "GSIs lack carrier config"
+problem with a standard fix. The community-standard fix (VoLTE-Fix mod by Khushraj Rathod,
+which extracts IMS files from stock firmware) **explicitly does not work on Samsung
+devices** — Samsung uses a proprietary, non-standard IMS implementation that doesn't follow
+the protocols that mod relies on. Getting calls working would need pulling Samsung's own
+proprietary IMS APK/config from stock firmware and manually integrating it — no documented
+recipe found for this yet. Logged as a known limitation, not pursued further for now.
