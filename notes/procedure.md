@@ -23,46 +23,65 @@ instead of a generic image. It's reversible (can reflash stock firmware via Odin
 as casually reversible as DSU would have been — treat the bootloader unlock as the
 commit point.
 
-## Key finding: a Fold3-specific recovery already exists
+## Key finding: a Fold3-specific recovery already exists (but is stale)
 
-Unlike LineageOS itself, a maintained TWRP/OrangeFox recovery for **exactly this device**
-(SM-F926B / q2q) exists: Azkali's project, kernel based on F926BXXS8HXG6 (Android 14),
-device tree forked from a Z Flip3 DT. XDA thread:
+A maintained TWRP/OrangeFox recovery for **exactly this device** (SM-F926B / q2q) exists:
+Azkali's project, kernel based on F926BXXS8HXG6 (Android 14), device tree forked from a Z
+Flip3 DT. XDA thread:
 https://xdaforums.com/t/orangefox-and-twrp-recovery-recovery-for-sm-f926b.4660021/
 Detailed install steps live on a companion wiki: https://fold-wiki.azka.li/en/Recovery
 (returned a 502 when checked during this research session — retry before relying on it,
 and fall back to the XDA thread's own posts/attachments if it stays down).
 
-This matters because it means the hard, device-specific part (a working AVB/vbmeta bypass
-and boot chain for q2q) is already solved by someone else, rather than something we'd need
-to reverse-engineer from scratch.
+**Confirmed problem**: our actual device (checked 2026-09-23, see
+[device-info.md](device-info.md)) is on `F926BXXSJJZH3`, Android 15 — a large firmware gap
+from Azkali's Android 14 base, with the thread unanswered since Sep 2024. Samsung's
+anti-rollback protection (ARB) means flashing an older AP/recovery against a newer
+bootloader is expected to be refused outright (`SW REV CHECK FAIL`) rather than actually
+work, per general Samsung ARB documentation — nobody has confirmed this specific
+combination either way.
 
-## Draft procedure (S21-guide pattern, adapted with q2q-specific recovery)
+## Better plan: patch our own current-firmware recovery instead
 
-1. **Confirm identity + unlock eligibility** — run `scripts/check-device.sh`. Non-US
-   Snapdragon Samsung variants (ours is Australian SM-F926B) are generally unlockable;
-   US carrier variants of Snapdragon Samsung phones typically are not. Australian retail
-   should be fine, but verify "OEM unlocking" actually appears in Developer Options before
-   going further.
-2. **Back up everything.** Unlocking wipes the device and permanently trips Knox
-   (Samsung Pay/Wallet, Secure Folder, Health lost; some banking apps may refuse to run
-   afterward). This is a one-way door — confirm before proceeding.
-3. **Unlock the bootloader**: Settings > Developer options > OEM unlocking (toggle on) →
-   reboot to Download Mode (Power+Vol Down at power-off, or `adb reboot download`) →
-   Vol Up to confirm unlock → device factory-resets itself.
-4. **Flash Azkali's recovery via Odin/SamFW Tool**: AP slot = recovery image tar
-   (`OrangeFox-Unofficial-q2q.img.tar` or TWRP equivalent), DATA slot = the matching
-   `vbmeta.tar` from the *same* release (mixing vbmeta from a different build/device is
-   the classic cause of bootloops per the treble_experimentations issue tracker).
-5. **Boot into the custom recovery**, then reboot to fastboot(d) mode from its menu.
+Rather than depend on Azkali's dormant build, the standard technique for getting fastboot
+access on **any** modern Samsung "dynamic partitions" device — version-matched, so no ARB
+conflict at all — is to patch your own currently-installed stock recovery:
+
+1. Download the **official** stock firmware matching what's actually on the phone
+   (`F926BXXSJJZH3`) from SamFW or SamMobile.
+2. Extract `recovery.img.lz4` and `vbmeta.img.lz4` from its `AP_*.tar.md5`.
+3. Run those through a patch script/workflow that adds an "Enter Fastboot" option to the
+   recovery and disables vbmeta verification — output is a single Odin-flashable
+   `patched-recovery.tar.md5`. Two options, same underlying technique:
+   - Local script (Linux/WSL — the Arch laptop works directly, no WSL needed): see the
+     [XDA "Patch/Modify STOCK Recovery with fastbootd" guide](https://xdaforums.com/t/patch-modify-stock-recovery-with-fastbootd-only-dynamic-samsung-devices-twrp-alternative.4643956/) —
+     a general technique for "Dynamic Samsung devices... Android 10 and above," not tied to
+     one model.
+   - Automated via GitHub Actions, no local Linux needed: fork
+     [raidenii/recv-vbmeta-patcher](https://github.com/raidenii/recv-vbmeta-patcher), upload
+     the two `.lz4` files, run the workflow, download the resulting `miniAP.tar.md5`.
+4. Flash the patched tar via Odin to the **AP** slot (disable "Auto Reboot" in Odin options
+   first, so the device stays put instead of letting stock system overwrite the patched
+   recovery on first boot).
+5. Manually boot to recovery (Vol- + Power to shut down, then Vol+ + Power) → a new **"Enter
+   Fastboot"** option appears in the stock recovery menu → you now have full fastboot
+   (`fastboot flash system`, `fastboot -w`, `fastboot getvar all`, etc.) without any
+   device-specific TWRP/OrangeFox build at all.
 6. **Pick and flash a GSI** — see [gsi-candidates.md](gsi-candidates.md). `fastboot flash
-   system <path-to-gsi.img>`, matching arm64/A-B partition layout.
-7. **Wipe data** from recovery (mandatory after a system-partition swap), then reboot.
-8. If bootloop: the usual culprits are (a) vbmeta mismatched to the recovery build, or
-   (b) picking the wrong GSI variant (vndklite vs standard) — install the "Treble Info" app
+   system <path-to-gsi.img>`, matching arm64/A-B partition layout, then `fastboot -w`.
+7. **Reverting to stock is symmetric**: re-extract a *clean* `recovery.img.lz4` +
+   `vbmeta.img.lz4` from the same official firmware (no patching), repackage as a tar,
+   reflash via Odin.
+8. If bootloop after the GSI flash specifically (not the recovery step): the usual culprit
+   is picking the wrong GSI variant (vndklite vs standard) — install the "Treble Info" app
    from Play/F-Droid on a *working* boot first if possible, or check community reports for
    q2q/S21-class Snapdragon 888 devices, to confirm which variant this device wants before
    re-flashing.
+
+This sidesteps Azkali's stale build and the ARB mismatch entirely, since input and output
+firmware versions match — it's not a downgrade, just a patch of what's already installed.
+Azkali's recovery remains a fallback worth asking about directly (still XDA-active as of
+Mar 2026 via the Ubuntu Touch thread), but isn't the critical path anymore.
 
 ## Realistic expectations
 
@@ -84,6 +103,9 @@ from the original handoff:
 - Azkali's SM-F926B (q2q) recovery thread: https://xdaforums.com/t/orangefox-and-twrp-recovery-recovery-for-sm-f926b.4660021/
 - Companion install-steps wiki (502 at last check, retry): https://fold-wiki.azka.li/en/Recovery
 - MisterZtr/LineageOS_gsi (candidate GSI, TrebleDroid-based LOS 23.2): https://github.com/MisterZtr/LineageOS_gsi
+- XDA "Patch/Modify STOCK Recovery with fastbootd only Dynamic Samsung Devices (TWRP Alternative)": https://xdaforums.com/t/patch-modify-stock-recovery-with-fastbootd-only-dynamic-samsung-devices-twrp-alternative.4643956/
+- raidenii/recv-vbmeta-patcher (GitHub Actions version of the same technique): https://github.com/raidenii/recv-vbmeta-patcher
+- Samsung ARB/anti-rollback mechanics (`SW REV CHECK FAIL`), confirming downgrades are the risky part, not patching in place
 - phhusson/treble_experimentations — **archived/dead as of Jan 2025**; useful historically
   for the bootloop-troubleshooting pattern (vbmeta mismatch) but no longer maintained:
   https://github.com/phhusson/treble_experimentations

@@ -13,37 +13,40 @@ There is no official or active unofficial LineageOS build for q2q. The Fold5 LOS
 useful as reference for foldable-specific logic (inner/outer display switching, dual
 brightness, fold sensor).
 
-Realistic path: a **TrebleDroid/LineageOS GSI**, flashed directly via a custom recovery
-after bootloader unlock. **Correction from the original handoff: DSU (Dynamic System
-Updates) is not usable here** — Samsung strips the DSU Loader out of One UI entirely, on
-every Galaxy device, so there's no non-destructive test-boot path. The actual working
-method (confirmed via the same-SoC S21 5G Snapdragon GSI community, and a
-Fold3-specific recovery project) is: unlock bootloader → flash a q2q-specific custom
-recovery (TWRP/OrangeFox, already exists — see below) with matching vbmeta via
-Odin → `fastboot flash system` the GSI → wipe data. See
-[notes/procedure.md](notes/procedure.md) for the full draft writeup and sources.
+Realistic path: a **TrebleDroid/LineageOS GSI**, flashed directly via fastboot after
+bootloader unlock. **Correction from the original handoff: DSU (Dynamic System Updates) is
+not usable here** — Samsung strips the DSU Loader out of One UI entirely, on every Galaxy
+device, so there's no non-destructive test-boot path.
 
-**Good news found during research**: a maintained TWRP/OrangeFox recovery already exists
-for exactly this device (SM-F926B/q2q, by Azkali) — the hard device-specific part (AVB/
-vbmeta bypass, boot chain) is already solved by someone else. Bad news: the Fold3 custom-ROM
-scene is confirmed dead — the one 2025 "any custom OS?" XDA thread got zero replies.
+There's a Fold3-specific recovery (Azkali's TWRP/OrangeFox for q2q), but it's built on
+Android 14 firmware and **our phone is on Android 15** (confirmed — see
+[notes/device-info.md](notes/device-info.md)) — a large enough gap that Samsung's
+anti-rollback protection would likely refuse to flash it. Instead of relying on that stale
+build, the current plan **patches our own currently-installed stock recovery** to add
+fastboot access — same firmware version in and out, so no anti-rollback conflict, and no
+dependency on a dormant device-specific project. See [notes/procedure.md](notes/procedure.md)
+for the full method and sources.
+
+**Bad news, confirmed**: the Fold3 custom-ROM scene is dead — the one 2025 "any custom OS?"
+XDA thread got zero replies, and phhusson's treble_experimentations (classic GSI compat
+tracker) has been archived since Jan 2025.
 
 ## Plan
 
 1. [x] Research how similar SM8350 (Snapdragon 888) Samsung devices achieve this — done,
    see [notes/procedure.md](notes/procedure.md).
-2. [ ] Confirm device details: exact model (SM-F926B), current One UI / Android version,
-   whether "OEM unlocking" is visible/enabled in Developer Options.
-   → `scripts/check-device.sh` once the phone is connected via adb.
-3. [ ] Get Azkali's q2q recovery + matching vbmeta tar from
-   https://xdaforums.com/t/orangefox-and-twrp-recovery-recovery-for-sm-f926b.4660021/
-   (companion wiki was down when checked — retry https://fold-wiki.azka.li/en/Recovery).
+2. [x] Confirm device details — done, see [notes/device-info.md](notes/device-info.md):
+   SM-F926B, Android 15 (`F926BXXSJJZH3`), bootloader locked, Knox untripped.
+3. [ ] Download official `F926BXXSJJZH3` firmware from SamFW/SamMobile, extract
+   `recovery.img.lz4` + `vbmeta.img.lz4`, and patch them per
+   [notes/procedure.md](notes/procedure.md) to add fastboot access without touching ARB.
 4. [ ] Pick a GSI to try first — see [notes/gsi-candidates.md](notes/gsi-candidates.md)
    (leaning Evolution X for first bring-up, LineageOS 23.2 GSI as the real target).
-5. [ ] Back up the device, confirm the user is OK with the permanent Knox trip, then unlock
-   the bootloader and run through [notes/procedure.md](notes/procedure.md) step by step.
-6. [ ] Optional: draft an XDA post to josip-k (q2q interest) and to bgcngm (Tab S7 extended
-   external display).
+5. [ ] Unlock the bootloader (low-risk on its own, confirmed with the user — data backed up,
+   this isn't a daily driver, no resale planned) → flash the patched recovery → flash the
+   GSI, per [notes/procedure.md](notes/procedure.md).
+6. [ ] Optional: draft an XDA post to josip-k (q2q interest), Azkali (Android 15 recovery
+   status), and bgcngm (Tab S7 extended external display).
 
 ## Known constraints going in
 
