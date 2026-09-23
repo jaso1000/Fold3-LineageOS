@@ -584,3 +584,51 @@ successfully — especially `boot` — check it's from the phone's actual curren
 version first (`samloader check-update`), not just "a trusted source" in the abstract. The
 May-2026-vs-Sept-2026 gap had been silently fine for three other partitions all session,
 which made it easy to assume it'd be fine for a fourth. It wasn't.
+
+## Touch: confirmed live, partial progress — reaches LP mode, not full touch (2026-09-24)
+
+Finally got reliable root (Magisk-patched boot, using the **correct** current-firmware
+boot.img from the samloader recovery above — the earlier mismatched one is exactly what
+caused the boot incident). Opened the Magisk app once on-device to complete setup, then
+`adb shell su -c ...` worked reliably (unlike `adb root`, no daemon restart needed).
+
+### Confirmed live: the `lowpower_mode` theory was right, but incomplete
+
+`echo aod_enable,1 > /sys/class/sec/tsp2/cmd` succeeded (`cmd_result` returned
+`aod_enable,1:OK`). Re-triggering a fold and capturing live `dmesg` showed the exact
+predicted driver branch fire:
+
+```
+stm_ts 66-0049: [sec_input] stm_chk_tsp_ic_status: START: pos[2] power_state[0x0] lowpower_flag[0x4] folding
+stm_ts 66-0049: [sec_input] stm_chk_tsp_ic_status(sub): HALL  : TSP IC OFF => LP[0x4]
+```
+
+This confirms the theory from earlier tonight exactly — `lowpower_mode != 0` (`0x4` here,
+the `SEC_TS_MODE_SPONGE_AOD` bit) does unblock the SUB touch IC power-on path that was
+previously always falling through to "nothing" with `lowpower_mode == 0`.
+
+### But: this only reaches **LP (low-power/gesture) mode**, not full interactive touch
+
+Per the driver source, "LP mode" is Samsung's AOD/wake-gesture scanning state — reduced
+power, meant for detecting a specific gesture (double-tap, swipe) while the screen is
+notionally off, not for normal finger tracking/multi-touch. This is a real, different power
+state from full `SEC_INPUT_STATE_POWER_ON`. Tried writing `1` to
+`/sys/class/sec/tsp2/input/enabled` (spotted in the same dmesg capture) as a guess at
+forcing full activation — no effect, no corresponding driver log line, unlike every
+Samsung-specific write we tried (`cmd`, `dualscreen_policy`) which all produced clear
+`[sec_input]`-tagged log output.
+
+### Working theory for next time
+
+Getting from LP mode to full active touch likely needs the same category of fix as the
+display-switching problem itself did — Android's power management needs to tell the SUB
+touch driver "the outer display is now the active, interactive one," which is probably a
+HAL/framework signal (not a simple sysfs write) that stock One UI provides and this generic
+LineageOS setup doesn't. Worth checking: whether `power_state` (distinct from
+`lowpower_mode`) has its own sysfs/HAL trigger, and whether Android's standard
+`PowerManagerService`/`InputManagerService` "screen interactive" broadcast reaches this
+driver's suspend/resume callback at all in a generic AOSP framework (may need a vendor HAL
+service bridging this, similar in spirit to `vendor.lineage.touch-service.samsung-foldable`
+seen in the Fold5 device tree — that service exists for gesture/glove-mode features, not
+confirmed to handle this specific transition, but the same architectural pattern is worth
+investigating).
