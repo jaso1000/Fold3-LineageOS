@@ -530,3 +530,57 @@ failing step.
    it), or (b) as a blunter workaround, patch the kernel driver's default init value directly
    (`stm_core.c:1470`) and rebuild — a much bigger undertaking (full kernel build, not just
    flashing a pre-built image) than anything done in this session so far.
+
+## Incident: boot-image version mismatch bricked normal boot, recovered (2026-09-24)
+
+While chasing reliable root access (see the Magisk-boot-patching section above), flashed a
+`boot.img` sourced from the **May 2026** `F926BXXSIJZE5` firmware (the same firmware our
+recovery/vendor/system have been running from all session, chosen originally because it was
+the only trusted-source firmware available). Both the Magisk-patched version *and* a plain,
+unmodified copy of that same May-2026 `boot.img` failed identically: **Samsung bootloader
+"Secure check fail"** screen, unable to boot to system at all.
+
+**Root cause**: unlike `vendor`/`system`/`recovery` (which tolerated this same ~4-month
+version gap fine all session), `boot` specifically is checked against a stricter/different
+rollback-index or signature boundary that the May 2026 build doesn't satisfy against this
+phone's actual (Sept 2026 `F926BXXSJJZH3`) fused state. This is exactly the anti-rollback
+risk flagged as theoretical way back at the start of this project — it just never actually
+bit us until we touched `boot` specifically.
+
+**Never actual brick risk**: TWRP recovery remained fully accessible throughout via adb the
+entire time (confirmed repeatedly) — this was a "can't boot to system" problem, not a
+"can't boot at all" problem, consistent with every other close call this session.
+
+### The fix: samloader + Samsung's own official server
+
+Instead of another third-party mirror, used `samloader` (already present in `~/Downloads`
+from the earlier Tab S7 project) to query Samsung's **official FUS server directly**:
+
+```
+samloader check-update -m SM-F926B -r VAU
+# -> F926BXXSJJZH3/F926BOXMJJZH3/F926BXXSJJZH3/F926BXXSJJZH3 (exact match to the phone's actual build)
+samloader download -m SM-F926B -r VAU -v <version string> -d <out_dir>
+```
+
+This is a **better source than anything used earlier in this project** — genuinely
+authoritative (Samsung's own server, not a mirror), and it downloads+decrypts automatically.
+Worth remembering for next time instead of reaching for SamMobile/SamFW/HalabTech first.
+
+Extracted the matching `boot.img` from this download's AP tar, flashed it via the same
+Install Image → "Boot" mechanism — booted normally immediately.
+
+### Saved for safety: a permanent exact-match partition backup
+
+`build/current-firmware-extracted/` now has `boot.img`, `recovery.img`, `vendor_boot.img`,
+`vbmeta.img`, `dtbo.img` — all pulled from the confirmed-exact-match `F926BXXSJJZH3` firmware
+this incident forced us to download. (Not committed to git — gitignored like all firmware
+blobs — but sitting on disk for next time. If `build/` ever gets cleared, re-run
+`samloader check-update`/`download` again; it's fast and authoritative.)
+
+### Lesson for next time
+
+Before flashing **any** new partition content we haven't already been running from
+successfully — especially `boot` — check it's from the phone's actual current firmware
+version first (`samloader check-update`), not just "a trusted source" in the abstract. The
+May-2026-vs-Sept-2026 gap had been silently fine for three other partitions all session,
+which made it easy to assume it'd be fine for a fourth. It wasn't.
