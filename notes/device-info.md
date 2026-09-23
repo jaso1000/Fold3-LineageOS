@@ -69,3 +69,23 @@ This is the XSA (Australia, unbranded) build of F926BXXSIJZE5, Android 15, secur
 2026-05-05 — **not an exact match** to the phone's current build (F926BXXSJJZH3, Sept 2026)
 but same major Android 15 release, from a trusted source. See procedure.md for the
 recovery/vbmeta patching plan using this file.
+
+## Bootloader unlock (2026-09-23)
+
+Confirmed unlocked via re-run of check-device.sh:
+- `ro.boot.flash.locked`: `1` → `0` (unlocked)
+- `ro.boot.warranty_bit`: still `0` — Knox trip apparently triggers on first non-Samsung-signed
+  flash, not from the OEM unlock toggle alone on this device/firmware. Expect this to flip to
+  `1` (permanently) once the patched recovery is flashed.
+
+Build still reports `F926BXXSJJZH3` post-wipe, as expected (unlocking doesn't change firmware
+version, just the lock state).
+
+### Note on entering Download Mode on this device/firmware
+
+The classic Vol Up + Vol Down + USB combo (and `adb reboot download`) landed on a stripped-down
+"D2 error" blue screen instead of the real warning/unlock UI — Samsung's newer firmware blocks
+the classic Download Mode entry while any lock-screen security (PIN/pattern/biometrics) is
+active. Fix that worked: Settings → Security and Privacy → Lock Screen → set to None (does not
+wipe data), power off completely, then Vol Up + Vol Down + USB — this reached the real screen.
+Re-enable lock screen security after flashing is done.
