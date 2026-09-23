@@ -6,27 +6,44 @@ which is done and working.
 
 Device: Samsung Galaxy Z Fold3, SM-F926B (Australian variant), codename **q2q**, Snapdragon 888 (SM8350).
 
-## Status: bootloader unlocked, blocked on fastboot access (paused 2026-09-23)
+## Status: Android 16 booting with working Play Store (paused 2026-09-24)
 
 **Where things actually stand right now**, for picking this back up later:
-- Bootloader is **unlocked** and stable. Knox has tripped. Device boots normally, fully
-  functional as a phone.
-- We built a patched recovery+vbmeta (from May 2026 `F926BXXSIJZE5` firmware, since the
-  phone's exact Sept 2026 build wasn't available from a trusted source) and flashed it
-  successfully via heimdall. It's currently on the device.
-- Hit one real scare: after flashing, normal system boot failed once ("couldn't load
-  system") — **fixed by a factory reset**, no data of consequence lost (already backed up),
-  device fully healthy afterward. Full incident writeup in
-  [notes/procedure.md](notes/procedure.md#incident-system-boot-failure-after-recoveryvbmeta-flash-2026-09-23).
-  Download Mode and heimdall access were never lost — this was never brick territory.
-- **Blocked**: the patched recovery doesn't actually expose fastboot access. Tried three
-  ways (visible "Enter Fastboot" menu option, automatic USB fastbootd exposure, `adb reboot
-  fastboot` boot-reason flag) — none worked. The community hexpatch technique we used
-  (patterns from ~Dec 2023) appears to be stale against this device's 2026 firmware; research
-  suggests Samsung has been actively hardening/stripping recovery features through 2026.
-- **Next steps to try** (not yet attempted): a different patch fork with updated hex
-  patterns, or — probably higher-value — just asking Azkali directly (still active on the
-  Fold3 scene as of Mar 2026) whether they've hit and solved this same 2026 hardening.
+- Bootloader **unlocked**, Knox tripped, device fully healthy and usable.
+- Working custom recovery on the device: not Azkali's own build (their distribution wiki is
+  down) but a same-source mirror built via CI (see [notes/procedure.md](notes/procedure.md)),
+  patched with
+  [Yillié's DynaPatch](https://xdaforums.com/t/guide-direct-flashing-gsi-image-to-logical-partitions-on-samsung-galaxy-with-dynamic-partitions.4340947/)
+  to add "Install Image" support for the dynamic/logical partitions, which is what actually
+  let us flash GSIs without ever getting fastboot exposed (a separate, still-unresolved
+  side-quest — see below).
+- **Working daily-driver-ish build achieved**: LineageOS 23.2 (Android 16 QPR2) GSI +
+  [BiTGApps](https://bitgapps.io) (Core variant) booting cleanly. Confirmed working: WiFi,
+  Bluetooth, both cameras, haptics, mobile data, **Play Store/Google Play Services**. Broken:
+  fingerprint (expected — matches the established Android-14-only pattern from research),
+  audio/speakers (new, not yet investigated), and — the current focus — **only the inner
+  screen works; the outer/cover screen stays frozen on the boot logo**, since a generic GSI
+  has zero foldable-aware display-switching logic. Full writeup, including the multi-hour
+  GApps SetupWizard-crash saga and its fix, in
+  [notes/procedure.md](notes/procedure.md#success-android-16-lineageos-232-booting-with-working-gapps-2026-09-24).
+- Evolution X 9.9.3 (Android 14) was the first GSI that booted at all, earlier in the same
+  session — still on disk, useful as a fallback: has working audio and (per the Android-14
+  pattern) fingerprint, but no GApps and no calls.
+- **Calls don't work** on any build tried — Samsung's IMS stack is proprietary and the
+  standard community VoLTE fix explicitly doesn't support Samsung devices. Unsolved,
+  deprioritized for now.
+- **Next goal (not yet started): get both screens working.** This needs real foldable-aware
+  device-tree/kernel work (display-switching HAL, dual brightness, fold-state sensor
+  integration) — a GSI fundamentally can't do this, no matter which one we pick. The only
+  known reference for someone getting this specific device's dual-screen switching working is
+  the abandoned [Pixel Experience WIP thread](https://xdaforums.com/t/pixel-experience-running-on-my-fold-3-wip-development.4483239/)
+  (2022-23) — got inner+outer switching, brightness, RIL, camera, and charging all working
+  via a proper device tree, but the build was never released and the developer vanished. That
+  thread (and Azkali's own `android_device_samsung_q2q` / kernel repos on
+  [GitLab](https://gitlab.com/azkali-samsung/q2q)) are the starting points to study — this is
+  a meaningfully bigger undertaking than anything done so far (building/adapting a real
+  device tree, not just flashing a pre-built image).
+- All work pushed to a private GitHub repo: https://github.com/jaso1000/Fold3-LineageOS
 
 Original research below is still accurate background context.
 
@@ -55,21 +72,21 @@ tracker) has been archived since Jan 2025.
 
 ## Plan
 
-1. [x] Research how similar SM8350 (Snapdragon 888) Samsung devices achieve this — done,
-   see [notes/procedure.md](notes/procedure.md).
-2. [x] Confirm device details — done, see [notes/device-info.md](notes/device-info.md):
-   SM-F926B, Android 15 (`F926BXXSJJZH3`).
-3. [x] Download official `F926BXXSIJZE5` firmware (closest trusted match; exact build wasn't
-   mirrored yet), extract `recovery.img.lz4` + `vbmeta.img.lz4`, patch and flash via heimdall.
-   Done — see [notes/procedure.md](notes/procedure.md).
-4. [x] Unlock the bootloader — done, stable, Knox tripped.
-5. [ ] **Blocked**: patched recovery doesn't expose fastboot access (see Status above).
-   Next: try an updated patch fork, or ask Azkali directly.
-6. [ ] Pick a GSI to try once fastboot access works — see
-   [notes/gsi-candidates.md](notes/gsi-candidates.md) (leaning Evolution X for first
-   bring-up, LineageOS 23.2 GSI as the real target).
-7. [ ] Optional: draft an XDA post to josip-k (q2q interest), Azkali (2026 recovery
-   hardening / fastboot access status), and bgcngm (Tab S7 extended external display).
+1. [x] Research how similar SM8350 (Snapdragon 888) Samsung devices achieve this.
+2. [x] Confirm device details — SM-F926B, Android 15 (`F926BXXSJJZH3`).
+3. [x] Unlock the bootloader — stable, Knox tripped.
+4. [x] Get a working custom recovery on the device (Azkali's build via a CI mirror + DynaPatch
+   for dynamic-partition image flashing — see [notes/procedure.md](notes/procedure.md)).
+5. [x] Get a GSI booting at all — Evolution X 9.9.3 (Android 14) first, then LineageOS 23.2
+   (Android 16).
+6. [x] Get GApps working on Android 16 — BiTGApps (Core), after MindTheGapps proved
+   incompatible with this GSI across three different install methods.
+7. [ ] **Current goal: get both screens working.** Needs real device-tree/kernel work for
+   foldable display switching — see Status above for starting points (Pixel Experience WIP
+   thread, Azkali's device tree/kernel repos). Not started.
+8. [ ] Unsolved, lower priority: calls (Samsung's proprietary IMS), audio on the Android 16
+   build, fastboot access on the recovery (we ended up not needing it — DynaPatch's Install
+   Image feature was sufficient — but still an open question if useful later).
 
 ## Known constraints going in
 
