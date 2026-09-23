@@ -290,3 +290,69 @@ investigating separately), fingerprint (expected — matches the established And
 fingerprint pattern from the S21 5G Snapdragon precedent thread).
 Not yet tested: mobile data, calls (expect calls to still need the Samsung-proprietary-IMS
 fix noted earlier, independent of GApps).
+
+## Dual-screen research (2026-09-24): found the exact root cause
+
+Goal for next session: get the outer/cover screen working (currently frozen on the boot
+logo, only inner screen renders).
+
+### Key realization: we've never touched vendor/odm
+
+Every GSI flash so far has only replaced `system` (via DynaPatch's Install Image). `vendor`
+and `odm` are still 100% stock Samsung, untouched — confirmed by extracting the stock
+`super.img` from our already-downloaded `F926BXXSIJZE5` firmware (`lpunpack` after
+`simg2img`, both from the newly-installed `android-tools` package) and comparing file sizes
+against the live device: identical, byte for byte.
+
+### What's actually present in vendor (confirmed on-device via adb)
+
+- `/vendor/etc/devicestate/device_state_configuration.xml` (1124 bytes) — the **simple** AOSP
+  version: only defines CLOSE (id 0) and OPEN (id 3) via a generic `<lid-switch>` condition.
+- `/vendor/etc/devicestate/sec/device_state_configuration.xml` (2998 bytes) — the **real**
+  Samsung config: defines CLOSE/TENT/HALF_FOLDED/OPEN/DUAL/REAR_DUAL (ids 0-5), using a
+  Samsung-specific sensor type `com.samsung.sensor.folding_state` (`lid_angle_fusion`) with
+  angle-range thresholds per state, not a simple switch.
+- `/vendor/etc/displayconfig/display_layout_configuration.xml` — maps state 0 (CLOSE) →
+  outer display address `4630947232161729155` active, state 3 (OPEN) → inner display address
+  `4630947232161729154` active. Also has a `sec/` richer variant, not yet compared.
+- Found the whole recipe by checking josip-k/Exynoobs's Fold5 (q5q) LineageOS device tree —
+  not portable itself (different chipset), but its `proprietary-files.txt` pointed straight
+  at `vendor/etc/devicestate/device_state_configuration.xml`, and its own
+  `configs/display/display_id_*.xml` files (brightness/HBM curves, one explicitly labeled
+  "Outer Display") are a good adaptable template for calibration values once basic switching
+  works: https://github.com/Exynoobs/android_device_samsung_q5q
+
+### Confirmed working: framework device-state machinery itself
+
+`adb shell dumpsys device_state` shows `DEVICE STATE MANAGER` is registered and functional —
+correctly reports `OPEN` (identifier 3) while unfolded. `adb shell dumpsys display` shows
+**both physical displays correctly enumerated** with the exact addresses from
+`display_layout_configuration.xml`, correct resolutions (inner 1768x2208, outer 832x2268 —
+right size for the actual cover screen), correct EDID, and correctly show inner `ON`/active +
+outer `OFF`/inactive while open — i.e., the *OPEN* state is configured completely correctly.
+
+### The actual bug, confirmed live
+
+Physically folded the phone closed, immediately re-checked `dumpsys device_state`:
+**`mCommittedState` stayed `OPEN`, `mIsLidOpen` stayed `true`.** The framework never detects
+the fold at all. Root cause: our system is reading the **simple** `lid-switch`-based config
+(the plain, non-`sec` file), but this hardware apparently doesn't expose fold state as a
+generic Linux lid-switch input event — it only reports it via the proprietary Samsung sensor
+that the *richer* `sec/` config expects. One UI presumably has a system-side hook that tells
+it to prefer the `sec/` config; our generic AOSP/LineageOS framework doesn't, so it falls
+back to a switch event that never fires.
+
+Confirmed independently at the kernel level too: `hall_ic_detect flip()` (seen earlier in a
+pstore boot log) and live logcat during a fold (`stm_ts: ... folding` / `unfolding`,
+`[VIB] set_current_dig_scale: ... FOLD:OPEN`) — the *hardware* correctly reports fold events
+in real time. The gap is specifically between kernel/HAL and the framework's device-state
+config selection, nothing lower.
+
+### Next concrete step (not yet attempted)
+
+Replace `/vendor/etc/devicestate/device_state_configuration.xml` with the content of the
+`sec/` version (or otherwise get the framework to consult it) — same `Install Image`
+mechanism should work for a vendor-partition edit, same as we've been doing for system. Once
+state detection itself works, still need to verify the display-switching handoff itself
+(`display_layout_configuration.xml` → SurfaceFlinger) — untested since state detection never
+got that far.
