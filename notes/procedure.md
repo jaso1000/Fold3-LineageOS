@@ -144,3 +144,44 @@ device/build), then GSI flashing per the steps above. Only one hex pattern match
 "Enter Fastboot" doesn't show up after flashing, that's the next thing to debug — may need
 to try patching against the exact current firmware once available, or check if a different
 recovery binary offset needs patching for this specific build.
+
+## Incident: system boot failure after recovery+vbmeta flash (2026-09-23)
+
+After flashing the patched recovery+vbmeta (built from May 2026 `F926BXXSIJZE5` firmware)
+via heimdall, recovery booted fine, but attempting to boot to normal system hit **"Couldn't
+load system, your data may be corrupt"**.
+
+Initial hypothesis was a vbmeta rollback-index mismatch: our patched vbmeta was built from
+May 2026 firmware, but the phone's actual system partition is the Sept 2026
+(`F926BXXSJJZH3`) build — theorized that Samsung's rollback-index commitment in the older
+vbmeta didn't match what's expected for the newer system, and that recovery's more lenient
+boot-chain checks let it through while full system boot enforced it strictly.
+
+**Resolution**: a factory reset (wipe data) from that error screen fixed it — phone booted
+normally afterward. This actually argues *against* the rollback-index theory (a true
+version-mismatch wouldn't be fixed by wiping `/data`, which doesn't touch the flashed
+partitions) — more likely just a stale data/cache validation issue after the recovery/vbmeta
+swap, not a genuine ARB conflict. Worth remembering if it recurs, but not treating it as a
+hard blocker going forward.
+
+**Confirmed not a brick at any point**: Download Mode and heimdall flashing remained fully
+functional throughout, and recovery itself always booted — only normal system boot was
+affected, and only until the reset.
+
+**Post-recovery state**: bootloader still unlocked, Knox now tripped
+(`ro.boot.warranty_bit`: 0 → 1) — this, not the earlier OEM-unlock toggle, is what actually
+flipped it, confirming the theory from device-info.md that Knox trips on the first
+non-Samsung-signed flash rather than the unlock step itself.
+
+## Still open: does the patch actually expose fastboot?
+
+Neither a visible "Enter Fastboot" recovery menu option nor automatic USB fastboot exposure
+(`fastboot devices` from the plain recovery screen) were found after the first flash attempt.
+Research suggests **Samsung stripped down recovery menu options in 2026 firmware**, and the
+community hexpatch patterns (originally written ~Dec 2023) have documented compatibility
+issues against newer One UI builds — our one matched pattern may not have been the actual
+correct gate for this build. A promising untried lead: `adb reboot fastboot` sent from a
+normally-booted system (not navigating the recovery UI) may reach fastbootd directly via the
+boot-reason flag, per a same-symptom report in
+https://github.com/Johx22/Patch-Recovery/issues/8 (unresolved in that thread, but worth
+testing here). Not yet tested against this device.
