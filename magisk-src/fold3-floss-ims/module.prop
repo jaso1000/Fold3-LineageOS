@@ -1,0 +1,6 @@
+id=fold3-floss-ims
+name=Fold3 Floss IMS (Telstra outgoing-call fix)
+version=v4
+versionCode=4
+author=jason
+description=phh Floss IMS built from source with outgoing-call media/connect/hangup fixes for networks that answer INVITE with a direct 200 OK (Telstra). Installed as a privileged app.

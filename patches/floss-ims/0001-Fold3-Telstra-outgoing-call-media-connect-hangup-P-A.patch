@@ -1,0 +1,260 @@
+From 86fae07fac6e331715ffdc79097ed69b0abfb041 Mon Sep 17 00:00:00 2001
+From: Jason Walker <59085866+jaso1000@users.noreply.github.com>
+Date: Thu, 24 Sep 2026 12:16:36 +1000
+Subject: [PATCH] Fold3/Telstra: outgoing call media+connect+hangup, P-ANI in
+ REGISTER, priv-app manifest
+
+- Start RTP threads and report callSessionInitiated when the INVITE is answered
+  with a direct 200 OK + SDP (no 183/precondition), as Telstra does
+- Hang up outgoing calls with a proper BYE; route cancel/BYE to the active call
+- Send P-Access-Network-Info (real serving LTE cell) in REGISTER; Telstra 403s
+  the authenticated REGISTER without it
+- Fix upstream syntax error (unclosed paren in mySdp)
+- Run as privileged app: drop sharedUserId=system, request the permissions
+  system uid used to grant implicitly (incl. CAPTURE_AUDIO_OUTPUT so the mic
+  isn't silenced during calls), drop protected-broadcast
+- Use prebuilt librnnoise_jni.so instead of building the rnnoise submodule
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ app/build.gradle                              |  7 +--
+ app/src/main/AndroidManifest.xml              | 11 +++-
+ .../main/java/me/phh/ims/PhhMmTelFeature.kt   | 11 ++++
+ app/src/main/java/me/phh/sip/SipHandler.kt    | 57 +++++++++++++++++--
+ 4 files changed, 73 insertions(+), 13 deletions(-)
+
+diff --git a/app/build.gradle b/app/build.gradle
+index 87dab0f..ede7506 100644
+--- a/app/build.gradle
++++ b/app/build.gradle
+@@ -5,7 +5,6 @@ plugins {
+ 
+ android {
+     compileSdk 33
+-    ndkVersion "25.1.8937393"
+ 
+     defaultConfig {
+         applicationId "me.phh.ims"
+@@ -47,11 +46,7 @@ android {
+     kotlinOptions {
+         jvmTarget = '1.8'
+     }
+-    externalNativeBuild {
+-        cmake {
+-            path file('jni/CMakeLists.txt')
+-        }
+-    }
++    // Native rnnoise lib comes prebuilt from app/jniLibs (see Fold3 notes)
+     namespace 'me.phh.ims'
+ }
+ 
+diff --git a/app/src/main/AndroidManifest.xml b/app/src/main/AndroidManifest.xml
+index 8efa0bd..aad92da 100644
+--- a/app/src/main/AndroidManifest.xml
++++ b/app/src/main/AndroidManifest.xml
+@@ -1,8 +1,7 @@
+ <?xml version="1.0" encoding="utf-8"?>
+ <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+     coreApp="true"
+-    android:persistent="true"
+-    android:sharedUserId="android.uid.system">
++    android:persistent="true">
+ 
+     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+ 
+@@ -10,6 +9,13 @@
+     <uses-permission android:name="android.permission.READ_PRIVILEGED_PHONE_STATE" />
+ 
+     <uses-permission android:name="android.permission.RECORD_AUDIO" />
++    <!-- Needed now that we run as a privileged app instead of android.uid.system -->
++    <uses-permission android:name="android.permission.INTERNET" />
++    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
++    <uses-permission android:name="android.permission.CONNECTIVITY_USE_RESTRICTED_NETWORKS" />
++    <uses-permission android:name="android.permission.MODIFY_PHONE_STATE" />
++    <!-- Otherwise AudioPolicy silences our mic while telephony owns the in-call audio mode -->
++    <uses-permission android:name="android.permission.CAPTURE_AUDIO_OUTPUT" />
+ 
+     <application
+         android:allowBackup="true"
+@@ -49,6 +55,5 @@
+       android:exported="false" />-->
+       <!--android:enabled="true"-->
+     </application>
+-    <protected-broadcast android:name="me.phh.ims.ALARM_PERIODIC_REGISTER" />
+ 
+ </manifest>
+diff --git a/app/src/main/java/me/phh/ims/PhhMmTelFeature.kt b/app/src/main/java/me/phh/ims/PhhMmTelFeature.kt
+index 7a670aa..6ba04d1 100644
+--- a/app/src/main/java/me/phh/ims/PhhMmTelFeature.kt
++++ b/app/src/main/java/me/phh/ims/PhhMmTelFeature.kt
+@@ -38,6 +38,9 @@ class PhhMmTelFeature(val slotId: Int) : PhhMmTelFeatureProtected(slotId) {
+         // if we leave ims to the radio...
+         return ImsCallProfile(callSessionType, callType)
+     }
++    // Listener of whichever call (incoming or outgoing) is currently active
++    @Volatile var activeCallListener: ImsCallSessionListener? = null
++
+     override fun createCallSession(profile: ImsCallProfile): ImsCallSessionImplBase {
+         Rlog.d(TAG, "$slotId createCallSession")
+         return object: ImsCallSessionImplBase() {
+@@ -61,6 +64,11 @@ class PhhMmTelFeature(val slotId: Int) : PhhMmTelFeatureProtected(slotId) {
+ 
+             override fun start(callee: String, profile: ImsCallProfile) {
+                 Rlog.d(TAG, "Starting call with $callee profile $profile")
++                activeCallListener = mListener
++                sipHandler.onCallConnected = {
++                    Rlog.d(TAG, "Outgoing call connected")
++                    mListener.callSessionInitiated(profile)
++                }
+                 sipHandler.call(callee)
+             }
+ 
+@@ -79,6 +87,7 @@ class PhhMmTelFeature(val slotId: Int) : PhhMmTelFeatureProtected(slotId) {
+ 
+             override fun terminate(reason: Int) {
+                 Rlog.d(TAG, "Terminating call with reason $reason")
++                sipHandler.hangupOutgoingCall()
+                 mListener.callSessionTerminated(ImsReasonInfo(ImsReasonInfo.CODE_USER_TERMINATED, 0, "Kikoo"))
+             }
+         }
+@@ -148,6 +157,7 @@ class PhhMmTelFeature(val slotId: Int) : PhhMmTelFeatureProtected(slotId) {
+                 override fun setListener(listener: ImsCallSessionListener) {
+                     Rlog.d(TAG, "Setting CallListener to $listener")
+                     callListener = listener
++                    activeCallListener = listener
+                 }
+ 
+                 override fun getCallId(): String {
+@@ -198,6 +208,7 @@ class PhhMmTelFeature(val slotId: Int) : PhhMmTelFeatureProtected(slotId) {
+         }
+         sipHandler.onCancelledCall = { param: Object, s: String, map: Map<String, String> ->
+             Rlog.d(TAG, "Cancelling call")
++            val callListener = activeCallListener ?: callListener
+             val statusCode = map["statusCode"]?.toInt() ?: -1
+             if (statusCode >= 400) {
+                 val statusMessage = map["statusString"] ?: "Kikoo"
+diff --git a/app/src/main/java/me/phh/sip/SipHandler.kt b/app/src/main/java/me/phh/sip/SipHandler.kt
+index d95e9af..28cf9b7 100644
+--- a/app/src/main/java/me/phh/sip/SipHandler.kt
++++ b/app/src/main/java/me/phh/sip/SipHandler.kt
+@@ -141,6 +141,7 @@ class SipHandler(val ctxt: Context) {
+     var onSmsStatusReportReceived: ((Int, String, ByteArray) -> Unit)? = null
+     var onIncomingCall: ((handle: Object, from: String, extras: Map<String, String>) -> Unit)? =
+         null
++    var onCallConnected: (() -> Unit)? = null
+     var onCancelledCall: ((handle: Object, from: String, extras: Map<String, String>) -> Unit)? =
+         null
+     private val smsLock = ReentrantLock()
+@@ -542,6 +543,14 @@ class SipHandler(val ctxt: Context) {
+         val tm = ctxt.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
+ 
+         val cellInfoList = tm.getAllCellInfo()
++        // Some networks (e.g. Telstra) 403 the authenticated REGISTER without P-Access-Network-Info.
++        // 3GPP TS 24.229 E-UTRAN form: MCC + MNC + TAC (4 hex) + ECI (7 hex).
++        val servingLte = cellInfoList.filterIsInstance<CellInfoLte>().firstOrNull { it.isRegistered }
++        val accessNetworkInfo = servingLte?.cellIdentity?.let { id ->
++            if (id.mccString != null && id.mncString != null && id.tac != Int.MAX_VALUE && id.ci != Int.MAX_VALUE)
++                "3GPP-E-UTRAN-FDD;utran-cell-id-3gpp=${id.mccString}${id.mncString}${"%04x".format(id.tac)}${"%07x".format(id.ci)}"
++            else null
++        } ?: "3GPP-E-UTRAN-FDD;utran-cell-id-3gpp=4500620f331a5e0a"
+         for(cell in cellInfoList) {
+             if(cell is CellInfoLte) {
+                 val cellIdentity = cell.cellIdentity
+@@ -596,6 +605,7 @@ class SipHandler(val ctxt: Context) {
+                     Authorization: $akaDigest
+                     Require: sec-agree
+                     Proxy-Require: sec-agree
++                    P-Access-Network-Info: $accessNetworkInfo
+                     $secClientLine
+                     """.toSipHeadersMap()
+             ) // route present on all calls except this
+@@ -1008,6 +1018,26 @@ a=sendrecv
+         }
+     }
+ 
++    // Hang up an established outgoing call: send BYE (through the same Route set as the INVITE)
++    // and stop RTP. Doesn't go through onCancelledCall, which reports on the incoming-call listener.
++    fun hangupOutgoingCall() {
++        val call = currentCall
++        callStopped.set(true)
++        if (call == null) return
++        thread {
++            val toHeader = call.callHeaders["to"]?.get(0) ?: return@thread
++            val target = toHeader.substringAfter("<").substringBefore(">")
++            val msg =
++                SipRequest(
++                    SipMethod.BYE,
++                    target,
++                    call.callHeaders - "content-type" - "expires" - "session-expires" - "min-se"
++                )
++            Rlog.d(TAG, "Sending $msg")
++            synchronized(socket.gWriter()) { socket.gWriter().write(msg.toByteArray()) }
++        }
++    }
++
+     fun terminateCall() {
+         // IDK what packet do we send, but at least we're close rtp
+         currentCall?.imsMediaSession?.let { imsMediaManager.closeSession(it) }
+@@ -1042,7 +1072,10 @@ a=sendrecv
+ 
+     var respInFlight: SipResponse? = null
+     fun call(phoneNumber: String) {
++        callStarted.set(false)
++        callStopped.set(false)
+         thread {
++            var mediaStarted = false
+ 
+             val rtpSocket = DatagramSocket(0, localAddr)
+             val fakeRtcpSocket = DatagramSocket(0, localAddr) //useless but annoying ImsMediaManager
+@@ -1224,8 +1257,11 @@ a=sendrecv
+ 
+                     if (localNone) {
+                         // "Allocating our local resource" and update the call
+-                        callDecodeThread()
+-                        callEncodeThread()
++                        if (!mediaStarted) {
++                            mediaStarted = true
++                            callDecodeThread()
++                            callEncodeThread()
++                        }
+ 
+                         val newSdp = respSdp.map { line ->
+                             if (line.startsWith("a=curr:qos local")) {
+@@ -1251,11 +1287,24 @@ a=sendrecv
+                     return@setResponseCallback false
+                 }
+ 
+-                if(!isPrecondition && resp.statusCode == 183) {
++                if(!isPrecondition && resp.statusCode == 183 && !mediaStarted) {
++                    mediaStarted = true
+                     callDecodeThread()
+                     callEncodeThread()
+                 }
+ 
++                // Some networks (e.g. Telstra) answer the INVITE directly with 200 OK + SDP,
++                // without any 183/precondition exchange: start media here in that case.
++                if (cseq.contains("INVITE") && resp.statusCode == 200) {
++                    if (!mediaStarted) {
++                        mediaStarted = true
++                        Rlog.d(TAG, "Call answered without early media, starting RTP to ${currentCall!!.rtpRemoteAddr}:${currentCall!!.rtpRemotePort}")
++                        callDecodeThread()
++                        callEncodeThread()
++                    }
++                    onCallConnected?.invoke()
++                }
++
+                    /* } else {
+                         imsMediaManager.openSession(
+                             rtpSocket, fakeRtcpSocket,
+@@ -1492,7 +1541,7 @@ a=sendrecv
+                 """<sip:$myTel@$local;transport=tcp>;expires=600000;+sip.instance="$sipInstance";+g.3gpp.icsi-ref="urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel";+g.3gpp.smsip;audio"""
+             val mySeqCounter = reliableSequenceCounter++
+             val ipType = if(socket.gLocalAddr() is Inet6Address) "IP6" else "IP4"
+-            val mySdp = ("""
++            val mySdp = """
+ v=0
+ o=$owner 1 2 IN $ipType ${socket.gLocalAddr().hostAddress}
+ s=phh voice call
+-- 
+2.55.0
+

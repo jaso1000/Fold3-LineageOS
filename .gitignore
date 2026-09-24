@@ -7,3 +7,5 @@ build/
 
 # Built Magisk modules (contain patched GSI binaries; rebuild with scripts/)
 magisk/
+# Built by scripts/make-floss-module.sh
+magisk-src/fold3-floss-ims/system/priv-app/

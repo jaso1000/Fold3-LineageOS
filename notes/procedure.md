@@ -796,3 +796,36 @@ Note: ImsMedia is NOT needed — Floss's ImsMedia path is disabled upstream ("WI
 `UNSOL_CELL_INFO_LIST` carries real values (e.g. rsrp -82, level 4). Likely Samsung RIL waiting
 for `FW_READY=1` via `ISehRadio::setVendorSpecificConfiguration` — what LineageOS's
 `hardware/samsung/ril/sehradiomanager` sends at boot. Candidate fix: ship a sehradiomanager.
+
+## Calls: OUTGOING VoLTE WORKING with a patched Floss (2026-09-24)
+
+Rebuilt phh's Floss from source (upstream `phhusson/ims` main @ c180bdf) with our fixes —
+patch in `patches/floss-ims/`, module built by `scripts/make-floss-module.sh`, installed as
+Magisk module `fold3-floss-ims` (priv-app `/system/priv-app/FlossIms`). phh's original APK
+must be uninstalled first (`pm uninstall me.phh.ims`); backup kept at
+`build/floss-ims-phh-original.apk`.
+
+Fixes, in the order they were hit:
+1. **Outgoing call stuck on "Calling"** — Telstra answers INVITE with a direct `200 OK`+SDP;
+   upstream only starts RTP threads on 183/precondition and never calls
+   `callSessionInitiated`. Now: start decode/encode on the 200, report connected, send a real
+   BYE on hangup, and route remote BYE/rejects to the active call's listener.
+2. **Upstream compile error** (unclosed `(` before an SDP raw string) — fixed.
+3. **Signature/uid** — can't sign with the TrebleDroid key, so dropped
+   `sharedUserId=android.uid.system`; grant via privapp-permissions:
+   READ_PRIVILEGED_PHONE_STATE, CONNECTIVITY_USE_RESTRICTED_NETWORKS, MODIFY_PHONE_STATE,
+   CAPTURE_AUDIO_OUTPUT (+ runtime RECORD_AUDIO/READ_PHONE_STATE/ACCESS_FINE_LOCATION via `pm grant`).
+4. **Crash: hidden API** `ServerSocket/DatagramSocket.getFileDescriptor$` (system uid was exempt)
+   → module `service.sh` sets `hidden_api_blacklist_exemptions` to exactly those 3 methods.
+5. **REGISTER 403 Forbidden** — upstream main omits `P-Access-Network-Info` in REGISTER (phh's
+   newer release hard-codes one). Now computed from the serving LTE cell
+   (MCC+MNC+TAC(4 hex)+ECI(7 hex)), falling back to phh's constant.
+6. **Mic silenced in calls** (`AF::RecordTrack: setSilenced`) — AudioPolicy only lets the
+   in-call mode owner or CAPTURE_AUDIO_OUTPUT holders record → added CAPTURE_AUDIO_OUTPUT.
+
+Gotcha: after replacing an APK via a Magisk overlay (same path/version), PackageManager keeps
+the old parse from `/data/system/package_cache` — `rm -rf /data/system/package_cache/*` + reboot.
+
+Status: outgoing call to 101 connects, voicemail audio heard (downlink), hangup clean; uplink no
+longer silenced (pending user confirmation that voice reached the other side). Incoming calls
+untested. DTMF not implemented in this path.
