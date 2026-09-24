@@ -33,3 +33,4 @@ currently delivered via Magisk that must be baked in. See notes/procedure.md for
 - [ ] Hotspot DNS: TetheringNext never starts a DNS proxy → currently DNAT to 8.8.8.8 (module fold3-net-fixes)
 - [ ] Fold device-state config (foldedDeviceStates/postures/display_features) — RRO overlays/Fold3FrameworkOverlay
 - [ ] Outer display brightness: lights HAL/framework path for the second panel (currently a polling helper writing panel1-backlight)
+- [ ] Adaptive refresh rate: make it ramp to 120 Hz on interaction (DisplayModeDirector / peak refresh config, touch boost) instead of forcing min = 120 Hz

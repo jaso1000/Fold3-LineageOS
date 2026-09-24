@@ -148,6 +148,10 @@ then deletes the enrolled fingerprint. Kept in `magisk-src/`, disabled on the ph
   GSI. Needs a telephony framework change (telephony-common is in the boot image) → ROM build.
 - **Outer-screen boot logo** stays until the first fold (needs a fix that doesn't change device state).
 - **Phone first-start ANR** still happens once per boot (recovers).
+- **Refresh rate**: adaptive mode didn't seem to reach 120 Hz when interacting. Workaround in use:
+  Settings → Display → Minimum refresh rate → 120 Hz (always 120 Hz; more battery). Not
+  investigated yet — likely the GSI's refresh-rate policy (peak/min refresh config, touch boost)
+  vs Samsung's panel modes (the kernel logs 48/96/120 Hz VRR/LFD modes).
 
 ## Debugging tips
 

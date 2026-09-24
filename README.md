@@ -57,6 +57,7 @@ Recovery if a module ever breaks boot: hold **Volume Down** during boot = Magisk
 - ✅ Brightness on both screens (outer follows the slider live)
 - ✅ Screen on/off and lock screen on both screens
 - ✅ Half-fold doesn't glitch
+- ⚠️ Adaptive refresh doesn't ramp up to 120 Hz on its own — workaround: Settings → Display → **Minimum refresh rate = 120 Hz** (smooth, costs some battery)
 - ☐ Flex mode in apps (e.g. YouTube half-folded)
 - ⚠️ Samsung logo stays on the outer screen after an unfolded boot until the first fold
 
