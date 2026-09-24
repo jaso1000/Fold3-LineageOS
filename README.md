@@ -45,8 +45,7 @@ Don't `ctl.restart ril-daemon` to fix a slow phone start — it breaks the finge
 - ✅ Incoming call with screen off / locked; decline; missed-call log
 - ☐ Calls still work after 1–2+ h idle (re-registration fix)
 - ✅ Speakerphone and Bluetooth audio in calls
-- ✅ SMS send/receive (over IMS)
-- ☐ MMS
+- ✅ SMS send/receive (over IMS), MMS send/receive
 - ⚠️ Signal bars always show 0 (Samsung RIL returns empty signal strength) — deferred to ROM build
 
 **Data & connectivity**
