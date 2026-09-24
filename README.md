@@ -78,25 +78,66 @@ Recovery if a module ever breaks boot: hold **Volume Down** during boot = Magisk
 - ☐ Overnight battery drain
 - ☐ Banking apps (may refuse: Knox tripped + Magisk)
 
-## How the phone is set up
+## Installing it yourself
 
-1. Bootloader unlocked (Knox tripped — Samsung Pay/Wallet, Secure Folder, Health are gone).
-2. Recovery: Azkali's q2q TWRP (CI mirror build) patched with
-   [DynaPatch](https://xdaforums.com/t/guide-direct-flashing-gsi-image-to-logical-partitions-on-samsung-galaxy-with-dynamic-partitions.4340947/)
-   for "Install Image" on dynamic partitions (no fastboot needed). TWRP can't decrypt `/data`.
-3. System: LineageOS 23.2 TrebleDroid GSI, grown with `truncate` + `resize2fs` so the GApps zip
-   fits, flashed via Install Image → System.
-4. GApps: BiTGApps Core zip via TWRP Install (MindTheGapps' SetupWizard hangs — very likely the
-   Codec2 bug below, unconfirmed).
-5. Vendor: stock `F926BXXSJJZH3` plus the hand-edited `device_state_configuration.xml`.
-6. Format Data, boot, then Magisk (boot image patched from the **exact-match** firmware boot.img —
-   a mismatched boot.img fails Samsung's "Secure check").
-7. Install the Magisk modules in the table above (`scripts/` builds them), plus the manual steps:
-   GSF `pm grant`s, IMS APN + carrier config override, `pm disable` SafetySourceReceiver.
+> ⚠️ **Read first.** Unlocking the bootloader **wipes the phone** and **trips Knox permanently**
+> (Samsung Pay/Wallet, Secure Folder, Samsung Health and some banking apps stop working, and
+> it can't be undone). This is a working personal build, not a polished ROM — you can end up
+> without a working phone. Only tested on **SM-F926B** (Exynos-free global/AU Snapdragon model)
+> on firmware `F926BXXSJJZH3`, with Telstra/Boost for calls.
 
-Firmware: `samloader check-update -m SM-F926B -r VAU` / `samloader download ...` pulls the exact
-matching firmware straight from Samsung — use it before flashing any partition (esp. `boot`).
-Step-by-step details and every root-cause investigation: [notes/procedure.md](notes/procedure.md).
+**Tools**
+- Samsung firmware: [samloader-rs](https://github.com/topjohnwu/samloader-rs) — downloads the
+  exact firmware straight from Samsung (`check-update -m SM-F926B -r <CSC>`, then `download`).
+- Flashing from Download Mode: [Heimdall](https://github.com/Benjamin-Dobell/Heimdall) (Linux/macOS)
+  or Odin (Windows).
+- adb from Android platform-tools.
+
+**1. Unlock the bootloader**
+1. Enable Developer options → **OEM unlocking**.
+2. Samsung blocks the real Download Mode screen while a lock-screen PIN/pattern/biometric is set
+   (you get a "D2 error" screen). Set Lock screen to **None**, power off, then hold
+   **Vol Up + Vol Down** and plug in USB.
+3. Long-press Vol Up to unlock and confirm. The phone wipes and reboots; redo the setup and
+   check OEM unlocking is still on.
+
+**2. Custom recovery**
+- Azkali's Fold3 (q2q) recovery: [XDA thread](https://xdaforums.com/t/orangefox-and-twrp-recovery-recovery-for-sm-f926b.4660021/),
+  device tree on [GitLab](https://gitlab.com/azkali-samsung/q2q) (Azkali's own download page is
+  down — we used a build made with [bm0x/twrp-actions-compiler](https://github.com/bm0x/twrp-actions-compiler)).
+  Flash it (with a verification-disabled vbmeta) from Download Mode.
+- Flash [**DynaPatch**](https://xdaforums.com/t/guide-direct-flashing-gsi-image-to-logical-partitions-on-samsung-galaxy-with-dynamic-partitions.4340947/)
+  in the recovery. It adds **Install Image** support for the dynamic `system`/`vendor`
+  partitions, so no fastboot is needed.
+- The recovery **can't decrypt `/data`** on this firmware, so no recovery backups — keep the
+  stock firmware (from samloader) as your way back.
+
+**3. System (GSI) + Google apps**
+1. Download the LineageOS 23.2 **VANILLA EXT4** GSI from
+   [MisterZtr/LineageOS_gsi](https://github.com/MisterZtr/LineageOS_gsi/releases) and grow the
+   image (`truncate -s +1700M system.img && e2fsck -f system.img && resize2fs system.img`) so the
+   GApps installer has room.
+2. `adb push` it to `/tmp` in recovery → Install → Install Image → **System**.
+3. Install [BiTGApps](https://bitgapps.io) **Core** for Android 16 (arm64) as a normal zip.
+   (MindTheGapps' setup wizard hangs on this phone.)
+4. **Format Data**, reboot.
+
+**4. Dual-screen vendor fix**
+Replace `/vendor/etc/devicestate/device_state_configuration.xml` with Samsung's own
+`/vendor/etc/devicestate/sec/device_state_configuration.xml` **with every `<lid-switch>`
+condition removed**, on a copy of your stock `vendor.img` (grow it by 64 KiB first), and flash it
+via Install Image → Vendor. Details: [notes/procedure.md](notes/procedure.md#dual-screen-switching-vendor-edit).
+
+**5. Root + fixes**
+1. Extract `boot.img` from the **exact** firmware your phone runs (samloader), patch it with
+   [Magisk](https://github.com/topjohnwu/Magisk), flash via Install Image → Boot, open the Magisk
+   app once. (A boot.img from any other firmware version fails Samsung's "Secure check".)
+2. Build and install this repo's Magisk modules (see the table above; `scripts/make-*-module.sh`
+   and `magisk-src/`), then do the manual steps listed in the table (GSF permissions, IMS APN +
+   `carrier_volte_available`, disabling `SafetySourceReceiver`).
+3. Calls: the Floss IMS module + carrier setup in
+   [notes/procedure.md](notes/procedure.md#volte-calls--module-fold3-floss-ims--manual-carrier-setup).
+   Carriers other than Telstra/Boost are untested.
 
 ## Tooling
 
@@ -108,8 +149,12 @@ Step-by-step details and every root-cause investigation: [notes/procedure.md](no
 
 ## References
 
-- Floss IMS (phh): https://github.com/phhusson/ims
-- TrebleDroid GSIs: https://github.com/TrebleDroid/treble_experimentations
-- q2q kernel source used for driver analysis: https://github.com/cawilliamson/android_kernel_samsung_q2q
-- Samsung LineageOS trees used as reference: Exynoobs sm8550-common / q5q (Fold5), samsung-sm8350
-- Fold3 forum: https://xdaforums.com/f/samsung-galaxy-z-fold3.12349/
+- LineageOS 23.2 GSI: https://github.com/MisterZtr/LineageOS_gsi
+- Fold3 recovery (Azkali): https://xdaforums.com/t/orangefox-and-twrp-recovery-recovery-for-sm-f926b.4660021/ · https://gitlab.com/azkali-samsung/q2q
+- DynaPatch (flash GSIs to dynamic partitions): https://xdaforums.com/t/guide-direct-flashing-gsi-image-to-logical-partitions-on-samsung-galaxy-with-dynamic-partitions.4340947/
+- samloader-rs: https://github.com/topjohnwu/samloader-rs · Heimdall: https://github.com/Benjamin-Dobell/Heimdall · Magisk: https://github.com/topjohnwu/Magisk
+- BiTGApps: https://bitgapps.io
+- Floss IMS (phh): https://github.com/phhusson/ims · TrebleDroid: https://github.com/TrebleDroid/treble_experimentations
+- q2q kernel source (driver analysis): https://github.com/cawilliamson/android_kernel_samsung_q2q
+- Reference device trees: Exynoobs sm8550-common / q5q (Fold5), samsung-sm8350
+- Fold3 XDA forum: https://xdaforums.com/f/samsung-galaxy-z-fold3.12349/
