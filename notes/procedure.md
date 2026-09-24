@@ -135,6 +135,15 @@ BiTGApps Core doesn't pre-grant GSF: `pm grant com.google.android.gsf android.pe
   is decoded, throwables go through `android.util.Log`, and any failure reports "not sent".
   Receiving already worked (incoming MESSAGE over IMS is injected into the GSM inbound handler).
 
+### RCS (Google Messages) — PlayIntegrityFork (third-party module, not in this repo)
+- **Symptom**: RCS stuck on "Connecting". Messages log: `RequestWithMsisdnTokenState: event HTTP 400`
+  → `Aborting UPI provisioning`, availability "Carrier RCS is not set up".
+- **Causes**: (1) no MSISDN on the SIM (`Message identity not found`) → enter number manually in
+  Messages; (2) the final ACS request carries a DroidGuard token and is rejected (400) without
+  Play Integrity BASIC.
+- **Fix**: Zygisk on + PlayIntegrityFork v18 + `autopif4.sh -m` (Pixel beta fingerprint) → BASIC
+  → config request 200, `RcsAvailability: AVAILABLE`. DEVICE isn't needed for RCS here.
+
 ### Fingerprint keeps losing its user — module `fold3-fingerprint-fix`
 - **Cause**: Samsung's HAL drops its active group after boot and after every **rild restart**
   (modem restart resets its secure-world session: `BAuth_SessionClose Fail`), then rejects

@@ -47,6 +47,7 @@ Don't `ctl.restart ril-daemon` to fix a slow phone start — it breaks the finge
 - ☐ Calls still work after 1–2+ h idle (re-registration fix)
 - ✅ Speakerphone and Bluetooth audio in calls
 - ✅ SMS send/receive (over IMS), MMS send/receive
+- ✅ RCS chats in Google Messages (needs Play Integrity BASIC + number entered manually, see install step 5)
 - ⚠️ Signal bars always show 0 (Samsung RIL returns empty signal strength) — deferred to ROM build
 
 **Data & connectivity**
@@ -76,10 +77,11 @@ Don't `ctl.restart ril-daemon` to fix a slow phone start — it breaks the finge
 
 **System**
 - ✅ Storage, Play Store / Google services, root
-- ☐ Google sign-in completed end to end
+- ✅ Google sign-in, Play Store installs (Messages, YouTube)
+- ✅ Play Integrity: BASIC (with PlayIntegrityFork); DEVICE/STRONG not expected with an unlocked bootloader
 - ☐ Several reboots in a row: network up within ~1 min each time
 - ☐ Overnight battery drain
-- ☐ Banking apps (may refuse: Knox tripped + Magisk)
+- ☐ Banking apps / Wallet tap-to-pay (may refuse: unlocked bootloader, only BASIC integrity)
 
 ## Installing it yourself
 
@@ -141,6 +143,11 @@ via Install Image → Vendor. Details: [notes/procedure.md](notes/procedure.md#d
 3. Calls: the Floss IMS module + carrier setup in
    [notes/procedure.md](notes/procedure.md#volte-calls--module-fold3-floss-ims--manual-carrier-setup).
    Carriers other than Telstra/Boost are untested.
+4. RCS (optional): enable Zygisk in Magisk, install
+   [PlayIntegrityFork](https://github.com/osm0sis/PlayIntegrityFork) and run its action
+   (`autopif4.sh`) to fetch a current Pixel beta profile (expires every ~6 weeks; re-run then).
+   Install Google Messages + Carrier Services, enter your number in Messages → Settings →
+   Advanced → Phone number (the SIM doesn't carry it), then toggle RCS chats off/on.
 
 ## Tooling
 
