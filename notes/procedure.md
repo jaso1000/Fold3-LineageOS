@@ -732,3 +732,24 @@ Fix: Magisk module `fold3-boot-splash` (source in `magisk-src/fold3-boot-splash/
 CLOSE→sensor cycle, which gives the outer display a real frame then turns it off properly.
 Verified afterwards: `Override Request active: false`, state back to sensor-driven OPEN.
 **User confirmed** the logo now clears on its own (inner screen blinks briefly once at boot).
+
+## Retrospective (UNCONFIRMED): the Codec2 seccomp bug probably explains earlier failures too
+
+Not proven — the logs from those attempts were wiped by Format Data — but the evidence fits:
+
+- **MindTheGapps / LineageOS GAPPS GSI "Android Setup isn't responding" ANR.** The seccomp
+  crash lives in the *vendor* partition (Samsung's policy) + the A16 GSI's allocator, so it
+  was present on every GApps attempt regardless of package. Google SetupWizard is among the
+  first apps to run and touches storage and media components; anything building a
+  `MediaCodecList` blocks forever on this bug, and doing that on a main thread is exactly an
+  ANR. Vanilla LineageOS's setup wizard and BiTGApps (which skips Google's SetupWizard) simply
+  never hit that path at boot — they "worked" while storage/media were silently broken.
+- **The "Android-14-only" pattern for audio + fingerprint (Evolution X 9.9.3).** Better
+  explained by A14's allocator not issuing the bare `mremap(MREMAP_MAYMOVE)` that the
+  vendor policy blocks, so Samsung's Codec2 service survived there. On A16 both came back
+  the moment the one policy rule was widened.
+
+**How to confirm if ever reflashing:** flash MindTheGapps (or the LineageOS GAPPS GSI) with
+the `fold3-media-c2-seccomp` module installed *before first boot*, and see whether Google
+SetupWizard completes. Note the module lives on `/data/adb`, so after Format Data it must be
+reinstalled (Magisk first) before the first boot that runs setup.
