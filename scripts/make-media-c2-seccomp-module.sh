@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Build the "fold3-media-c2-seccomp" Magisk module: lets Samsung's software Codec2 HAL
 # (samsung.software.media.c2@1.0-service, IComponentStore/default0) survive on the
-# Android 16 GSI. See notes/procedure.md ("Storage + media: FIXED").
+# Android 16 GSI. See notes/procedure.md ("Storage, media, ...").
 #
 # Its vendor seccomp policy only allows `mremap: arg3 == 3`; the GSI's newer bionic
 # allocator calls mremap with MREMAP_MAYMOVE alone, so minijail kills the service

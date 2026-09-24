@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Build the "fold3-floss-ims" Magisk module: phh's Floss IMS (github.com/phhusson/ims, main)
 # with our Telstra fixes (branch fold3-telstra-outgoing in build/src/floss-ims), installed as
-# a privileged app. See notes/procedure.md ("Calls / VoLTE").
+# a privileged app. See notes/procedure.md ("VoLTE calls").
 #
 # Why a priv-app: upstream's release APK is signed with the TrebleDroid key, which this GSI
 # trusts as platform (android.uid.system). We can't sign with that key, so we drop the

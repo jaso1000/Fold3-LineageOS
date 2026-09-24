@@ -2,7 +2,7 @@
 # Build the "fold3-outer-touch" Magisk module: a 2-instruction patch to the GSI's
 # /system/lib64/libpowermanager.so so Samsung's miscpower HAL enables BOTH touch panels
 # on screen-on, instead of only the inner one. See notes/procedure.md
-# ("Outer touchscreen: FIXED") for the full root-cause writeup.
+# ("Outer touchscreen") for the full root-cause writeup.
 #
 # Both call sites of ISehMiscPower::setInteractiveAsync(on, mode) pass a hard-coded
 # mode=0 ("main display only" -> tsp2 disabled). We change `mov w2, wzr` to
