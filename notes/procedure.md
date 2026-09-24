@@ -883,3 +883,18 @@ outer-screen boot logo (needs a fix that doesn't touch device state), phone firs
 Release notes (carrier portability): generic fixes = direct-200 handling, BYE, real P-ANI,
 audio/DTMF, re-register. Telstra-specific = no preconditions (should become: offer, retry
 without on 400/420/421), manual IMS APN + carrier_volte override (should be automatic).
+
+### Signal bars: root cause found — DEFERRED to the real ROM build (decision 2026-09-24)
+- `FW_READY` is NOT the problem: the GSI's telephony (`RadioNetworkProxy.setHidl`, phh patch)
+  already sends it (`PHH-Radio: HIDL FW_READY done`).
+- Boot race: `SET_UNSOLICITED_RESPONSE_FILTER -1` to PHONE0 fails with RADIO_NOT_AVAILABLE at
+  boot and DeviceStateMonitor caches it, never resending (airplane toggle does resend).
+- Real blocker: even when queried, Samsung's rild returns an **all-invalid SignalStrength**
+  (every field 2147483647), and never sends UNSOL_SIGNAL_STRENGTH or Seh `signalLevelInfoChanged`.
+  But `UNSOL_CELL_INFO_LIST` carries real values (e.g. rsrp -82, level 4) every few seconds.
+- "5G" icon is legit (LTE + NR NSA available).
+- Fix for the ROM build: in telephony (SignalStrengthController / SST cell-info handling), when
+  RIL signal is invalid, synthesize SignalStrength from the registered CellInfo's
+  CellSignalStrength. NOT doable as an overlay on this GSI: `telephony-common.jar` is in the
+  **boot image** (boot-telephony-common.oat/art/vdex) → replacing it breaks the boot image
+  (bootloop risk). Interim alternative if ever wanted: LSPosed runtime hook in com.android.phone.

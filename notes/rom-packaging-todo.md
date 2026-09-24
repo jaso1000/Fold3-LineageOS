@@ -1,0 +1,30 @@
+# TODO when packaging a real ROM (patched GSI or device tree build)
+
+Things deliberately deferred because they need source/framework changes, plus everything
+currently delivered via Magisk that must be baked in. See notes/procedure.md for details.
+
+## Must bake in (currently Magisk modules / manual steps)
+- [ ] libpowermanager miscpower mode -1 (outer touch) — source fix in phh's frameworks/native patch
+- [ ] Samsung Codec2 seccomp `mremap` rule (storage/media/fingerprint) — bind-mount at boot
+- [ ] device_state_configuration.xml lid-switch fix (dual-screen) — bind-mount at boot
+- [ ] Floss IMS (patched, patches/floss-ims) as priv-app + privapp-permissions + hidden-API exemptions
+- [ ] GSF runtime permissions (default-permissions XML)
+- [ ] `pm disable com.android.phone/.security.SafetySourceReceiver` (boot ANR mitigation) — or fix properly
+- [ ] IMS APN + carrier_volte_available: make automatic per SIM, not hand-set for 505-01
+
+## Framework fixes to do in source
+- [ ] **Signal bars**: synthesize SignalStrength from registered CellInfo when Samsung RIL returns
+      all-invalid values (telephony-common is in the boot image — must be a real build)
+- [ ] Resend SET_UNSOLICITED_RESPONSE_FILTER / device state when the radio becomes available
+      (DeviceStateMonitor caches the failed boot-time send)
+- [ ] Phone/rild startup: phone process blocks in IRadio.getService during rild's slow init
+      → "failed to complete startup" ANR loop. Consider more HwBinder threads / async RIL init.
+- [ ] Fingerprint: re-send setActiveGroup after the Samsung HAL restarts (HidlToAidl adapter)
+
+## Floss IMS for other carriers
+- [ ] Precondition fallback: offer QoS preconditions, retry without on 400/420/421 (Telstra rejects them)
+- [ ] Test on other carriers (Optus, Vodafone AU, overseas)
+- [ ] Incoming calls (untested), AMR-WB/EVS (HD voice), SMS over IMS
+
+## Cosmetic / later
+- [ ] Outer-screen boot logo — new approach that doesn't flip device state (the old one killed fingerprint)
