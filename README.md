@@ -85,7 +85,7 @@ Don't `ctl.restart ril-daemon` to fix a slow phone start — it breaks the finge
 - ✅ Play Integrity: BASIC (with PlayIntegrityFork); DEVICE/STRONG not expected with an unlocked bootloader
 - ☐ Several reboots in a row: network up within ~1 min each time
 - ☐ Overnight battery drain
-- ⚠️ Banking apps / Wallet tap-to-pay: not used on this phone. Many bank terms (e.g. Up, clause 35.5) forbid modified or rooted OSes, and an unlocked bootloader only gets BASIC integrity. Keep banking on a stock, updated phone.
+- ⚠️ Banking apps / Wallet tap-to-pay: not used on this phone. Many banks' terms forbid modified or rooted OSes, and an unlocked bootloader only gets BASIC integrity. Keep banking on a stock, updated phone.
 
 ## Installing it yourself
 
