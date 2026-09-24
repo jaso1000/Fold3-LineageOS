@@ -49,8 +49,14 @@ Don't `ctl.restart ril-daemon` to fix a slow phone start — it breaks the finge
 - ✅ Incoming calls: ring, caller ID, answer, audio both ways, hang up from either side
 - ✅ Incoming call with screen off / locked; decline; missed-call log
 - ☐ Calls still work after 1–2+ h idle (re-registration fix)
+- ☐ **Emergency calls (000/112) over VoLTE.** Unverified whether Floss handles IMS emergency calls, and there's no 3G fallback in Australia. Check from logs/code, **never** by dialling 000. Don't rely on this phone for emergencies until confirmed.
+- ☐ Call waiting, hold/swap, merge into conference
+- ☐ Voicemail notification (new-voicemail indicator)
+- ☐ Wi-Fi calling (likely unsupported by Floss)
+- ☐ USSD codes (e.g. balance checks)
 - ✅ Speakerphone and Bluetooth audio in calls
 - ✅ SMS send/receive (over IMS), MMS send/receive
+- ☐ Long SMS (over 160 chars, multipart) and group MMS
 - ✅ RCS chats in Google Messages (needs Play Integrity BASIC + number entered manually, see install step 5)
 - ⚠️ Signal bars always show 0. Samsung's RIL only reports bars through its own `ISehRadio` callback. The fix is proven but left for the ROM build (a side service can hang the RIL).
 
@@ -59,6 +65,7 @@ Don't `ctl.restart ril-daemon` to fix a slow phone start — it breaks the finge
 - ✅ Hotspot
 - ✅ GPS / location
 - ☐ NFC tag read
+- ☐ eSIM (download/activate a profile)
 
 **Display & fold**
 - ✅ Inner/outer switching on fold, outer touch, rotation on both screens
@@ -77,7 +84,8 @@ Don't `ctl.restart ril-daemon` to fix a slow phone start — it breaks the finge
 
 **Sensors & hardware**
 - ✅ Fingerprint (survives reboot; rarely the enrollment can still drop at boot if the HAL crashes, see procedure.md), haptics, proximity sensor, wireless charging
-- ☐ S Pen, reverse wireless charging, fast charging speed
+- ☐ S Pen (Fold edition, inner screen)
+- ☐ Fast charging speed, reverse wireless charging
 
 **System**
 - ✅ Storage, Play Store / Google services, root
@@ -86,6 +94,8 @@ Don't `ctl.restart ril-daemon` to fix a slow phone start — it breaks the finge
 - ☐ Several reboots in a row: network up within ~1 min, fingerprint still enrolled
 - ☐ Android Auto (installed, not yet tried in the car)
 - ☐ Overnight battery drain
+- ☐ A full day of normal use without crashes or lost network
+- ☐ Alarms fire while locked / in Doze
 - ⚠️ Banking apps / Wallet tap-to-pay: not used on this phone. Many banks' terms forbid modified or rooted OSes, and an unlocked bootloader only gets BASIC integrity. Keep banking on a stock, updated phone.
 
 ## Next: a real ROM build

@@ -21,7 +21,10 @@ currently delivered via Magisk that must be baked in. See notes/procedure.md for
   3. Framework fixes below (signal bars first; they're proven).
   4. Clean-install test on the phone, then release notes, XDA thread, licence notes (Floss GPLv2).
 - **Before building**: finish the open README checklist items (reboots, idle calls, battery,
-  Android Auto, NFC, headphones) so problems are attributed correctly.
+  Android Auto, NFC, headphones, call features) so problems are attributed correctly.
+- **Release blocker**: confirm emergency calling (000/112) works over VoLTE (IMS emergency via
+  Floss). There's no 3G fallback in Australia. If it doesn't work, it must be fixed or carry a
+  prominent warning.
 
 ## Must bake in (currently Magisk modules / manual steps)
 - [ ] libpowermanager miscpower mode -1 (outer touch) — source fix in phh's frameworks/native patch
@@ -47,6 +50,9 @@ currently delivered via Magisk that must be baked in. See notes/procedure.md for
       enrollment). Fix it in the HIDL fingerprint provider (HidlToAidlSessionAdapter).
 
 ## Floss IMS for other carriers
+- [ ] Emergency calls over IMS (emergency PDN/APN, SOS URN, emergency registration). Verify
+      without dialling 000 (logs/code), then fix if missing.
+- [ ] Call waiting / hold / conference, voicemail MWI, USSD over IMS, Wi-Fi calling (ePDG)
 - [ ] Precondition fallback: offer QoS preconditions, retry without on 400/420/421 (Telstra rejects them)
 - [ ] Test on other carriers (Optus, Vodafone AU, overseas)
 - [ ] AMR-WB/EVS (HD voice), SMS delivery-report handling (RP-ACK currently fed as a dummy status report); proper uplink gain instead of AGC
