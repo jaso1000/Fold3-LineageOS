@@ -6,9 +6,77 @@ which is done and working.
 
 Device: Samsung Galaxy Z Fold3, SM-F926B (Australian variant), codename **q2q**, Snapdragon 888 (SM8350).
 
-## Status: Android 16 daily-driver candidate (2026-09-24)
+## Status: Android 16 daily driver (updated 2026-09-24)
 
-**Update 2026-09-24 (later session):** outer touchscreen, storage (`/sdcard`), media playback/speaker audio and fingerprint all FIXED via three small Magisk modules built by `scripts/` — see the last sections of [notes/procedure.md](notes/procedure.md). Calls: outgoing VoLTE WORKING via patched Floss IMS (see notes). Still open: incoming-call test, DTMF, signal bars, outer-screen boot logo (splash module disabled — it broke fingerprint), Google sign-in not yet re-tested end to end.
+LineageOS 23.2 (Android 16) TrebleDroid GSI + BiTGApps Core, rooted with Magisk, on the stock
+Samsung A15 vendor (`F926BXXSJJZH3`). Nearly everything works, including **VoLTE calls on
+Telstra/Boost** and both screens. Fixes are delivered as small Magisk modules, built by
+`scripts/` or kept in `magisk-src/`; the root-cause writeups are in
+[notes/procedure.md](notes/procedure.md), and what still has to happen for a real ROM build is in
+[notes/rom-packaging-todo.md](notes/rom-packaging-todo.md).
+
+### Fixes in place
+
+| Problem | Root cause (short) | Fix | Where |
+|---|---|---|---|
+| Outer screen stuck on the boot logo / no display switching | `<lid-switch>` condition in Samsung's device-state config never true | Edited `device_state_configuration.xml` in vendor | hand-patched vendor image |
+| Outer touchscreen dead | GSI calls Samsung miscpower HAL with hard-coded "main display" mode | Patch 2 instructions in `libpowermanager.so` (mode -1) | module `fold3-outer-touch` (`scripts/make-outer-touch-module.sh`) |
+| No `/sdcard`, no media/"speakers", Google sign-in fails, fingerprint gone | Samsung Codec2 HAL killed by its seccomp policy (`mremap`), hanging MediaCodecList and StorageManagerService | Widen that one seccomp rule | module `fold3-media-c2-seccomp` (`scripts/make-media-c2-seccomp-module.sh`) |
+| Google sign-in "Checking info" | GSF missing runtime permissions (BiTGApps Core) | `pm grant` GSF permissions | manual (TODO: default-permissions XML) |
+| No calls (Telstra has no 3G) | No IMS stack usable with Samsung's vendor | phh's Floss IMS, **patched**: direct-200 answer handling, BYE, real P-ANI, no preconditions, jitter buffer, all AMR modes, DTMF, re-register alarm, priv-app permissions | module `fold3-floss-ims` (`patches/floss-ims/`, `scripts/make-floss-module.sh`) + IMS APN + `carrier_volte_available` override |
+| Phone app / no network after boot (ANR loop) | Phone blocks on slow rild init at startup | Disabled `com.android.phone/.security.SafetySourceReceiver`; recovers on its own now | manual `pm disable` (root cause still open) |
+| Hotspot "connected, no internet" | Tethering never starts a DNS proxy; clients' DNS goes nowhere | DNAT hotspot DNS to 8.8.8.8 | module `fold3-net-fixes` |
+| Cover-screen selfie camera shows the inner camera | GSI has no folded/open device-state config, so camera HAL never told "folded" | Framework RRO with fold states, postures and hinge feature | module `fold3-fold-config` (`overlays/Fold3FrameworkOverlay`) |
+| Outer screen brightness never changes | Only one backlight light (inner); Samsung HWC ignores per-display brightness | Helper mirrors live brightness to `panel1-backlight` | module `fold3-fold-config` (`service.sh`) |
+
+Disabled: `fold3-boot-splash` (cleared the outer-screen boot logo but killed the fingerprint HAL).
+Recovery if a module ever breaks boot: hold **Volume Down** during boot = Magisk safe mode.
+
+### Test checklist
+
+✅ works · ⚠️ known issue · ☐ not tested yet
+
+**Calls & messaging**
+- ✅ Outgoing calls (voicemail + real numbers), audio both ways, clean hang-up
+- ✅ Keypad tones (DTMF) in calls
+- ✅ Call audio smooth (jitter buffer)
+- ☐ Incoming call (answer, audio both ways, hang up)
+- ☐ Incoming call with screen off / locked; decline; missed-call log
+- ☐ Calls still work after 1–2+ h idle (re-registration fix)
+- ☐ Speakerphone + Bluetooth audio during a call
+- ☐ SMS send/receive, MMS
+- ⚠️ Signal bars always show 0 (Samsung RIL returns empty signal strength) — deferred to ROM build
+
+**Data & connectivity**
+- ✅ Mobile data, Wi-Fi, Bluetooth (headphones, controller), airplane mode
+- ✅ Hotspot
+- ✅ GPS / location
+- ☐ NFC tag read
+
+**Display & fold**
+- ✅ Inner/outer switching on fold, outer touch, rotation on both screens
+- ✅ Brightness on both screens (outer follows the slider live)
+- ✅ Screen on/off and lock screen on both screens
+- ✅ Half-fold doesn't glitch
+- ☐ Flex mode in apps (e.g. YouTube half-folded)
+- ⚠️ Samsung logo stays on the outer screen after an unfolded boot until the first fold
+
+**Audio, camera & media**
+- ✅ Speakers / media playback, microphone, screen recording, volume keys
+- ✅ Rear main camera, inner (under-display) selfie, cover-screen selfie, flashlight
+- ☐ Other rear lenses (ultra-wide / tele), video recording with sound
+- ☐ Wired / USB-C headphones
+
+**Sensors & hardware**
+- ✅ Fingerprint (survives reboot), haptics, proximity sensor, wireless charging
+- ☐ S Pen, reverse wireless charging, fast charging speed
+
+**System**
+- ✅ Storage, Play Store / Google services, root
+- ☐ Google sign-in completed end to end
+- ☐ Several reboots in a row: network up within ~1 min each time
+- ☐ Overnight battery drain
+- ☐ Banking apps (may refuse: Knox tripped + Magisk)
 
 ### Earlier status (kept for history)
 
