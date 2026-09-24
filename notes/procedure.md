@@ -753,3 +753,46 @@ Not proven — the logs from those attempts were wiped by Format Data — but th
 the `fold3-media-c2-seccomp` module installed *before first boot*, and see whether Google
 SetupWizard completes. Note the module lives on `/data/adb`, so after Format Data it must be
 reinstalled (Magisk first) before the first boot that runs setup.
+
+## Calls / VoLTE: registration WORKS via Floss IMS; outgoing call media gap found (2026-09-24)
+
+Carrier: Boost (Telstra MVNO, 505-01). No 3G → voice must be VoLTE.
+
+### Why stock IMS options can't work on this vendor
+- Samsung's vendor manifest `vendor.samsung.hardware.radio.exclude.qcom.xml` overrides away all
+  Qualcomm IMS HALs; this A15 vendor has **no** `vendor.qti.hardware.radio.ims` libraries at all.
+  Samsung IMS goes via `ISehRadio` + `ISehChannel/imsd`, used by Samsung's `com.sec.imsservice`
+  from One UI's *system* partition (gone on a GSI). So "CAF IMS" has nothing to talk to.
+- Fold5 LineageOS (Exynoobs) uses `org.codeaurora.ims` + a QTI IMS radio HAL present in the
+  *newer* Samsung vendor firmware — not available on the Fold3's A15 vendor. Not portable.
+- SM8350 LineageOS trees (samsung-sm8350 org) ship no IMS at all (3G-country setup).
+
+### Floss IMS (phh, experimental) — what's done
+1. Installed via Treble Settings → IMS → Floss (`me.phh.ims`, signed with the TrebleDroid key;
+   this GSI's `PackageManagerServiceUtils.doesSignatureMatchPHH` treats that key as platform).
+2. `setprop persist.sys.phh.ims.floss true`; `cmd overlay enable me.phh.treble.overlay.flossims_telephony`.
+3. Added APN: name "Telstra IMS", apn `ims`, type `ims`, IPV4V6, numeric 50501.
+4. Carrier config override (Boost's AOSP config has VoLTE off):
+   `cmd phone cc set-value -s 0 -p carrier_volte_available_bool true` (root, persistent).
+
+Result: **IMS registration succeeds** (AKA auth → `200 OK`, reginfo `state="active"` for mmtel),
+and outgoing calls are routed over IMS (`INVITE` → `100 Trying` → `200 OK` from Telstra).
+
+### Remaining bug: outgoing call never "connects" (dialer stuck on Calling)
+Telstra answers the INVITE with a direct `200 OK` + SDP (no 183/precondition). Floss (main branch,
+last pushed 2025-01) only starts `callDecodeThread()/callEncodeThread()` in its 183/UPDATE
+precondition paths, and the outgoing `ImsCallSessionImplBase` never calls
+`listener.callSessionInitiated()` (`setOnCallConnected` is never wired). So no RTP, no UI
+transition, and Telstra BYEs after ~18s (`481`). Fix = in the 200-OK branch parse remote SDP
+(c=/m= audio), start both threads, and notify the session listener. Deployment catch: a rebuilt
+Floss loses the TrebleDroid signature → can't be `android.uid.system`; would need to run as a
+privileged app instead (untested).
+Incoming calls ARE wired (`setOnIncomingCall`) — untested so far.
+
+Note: ImsMedia is NOT needed — Floss's ImsMedia path is disabled upstream ("WIP, not enabled").
+
+### Also found: no signal bars (shows 5G, 0 bars)
+"5G" is correct (LTE anchor + NR NSA). Bars: RIL never sends `UNSOL_SIGNAL_STRENGTH` although
+`UNSOL_CELL_INFO_LIST` carries real values (e.g. rsrp -82, level 4). Likely Samsung RIL waiting
+for `FW_READY=1` via `ISehRadio::setVendorSpecificConfiguration` — what LineageOS's
+`hardware/samsung/ril/sehradiomanager` sends at boot. Candidate fix: ship a sehradiomanager.
