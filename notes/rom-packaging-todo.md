@@ -58,6 +58,7 @@ currently delivered via Magisk that must be baked in. See notes/procedure.md for
 - [ ] AMR-WB/EVS (HD voice), SMS delivery-report handling (RP-ACK currently fed as a dummy status report); proper uplink gain instead of AGC
 
 ## Cosmetic / later
+- [ ] Double-tap to wake on both panels: check it works; if not, wire the Samsung touch driver's gesture mode (stm_fold `input_open`/LP mode) into the framework's double-tap setting
 - [ ] Outer-screen boot logo: at boot, power off the inactive panel via DisplayManager so HWC sends it a real display-off (the bootloader leaves it lit, `dpms=On`). Don't flip device state. Try `cmd display power-off/power-reset` first. See procedure.md.
 
 ## Added 2026-09-24 evening

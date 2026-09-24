@@ -71,6 +71,7 @@ Don't `ctl.restart ril-daemon` to fix a slow phone start — it breaks the finge
 - ✅ Inner/outer switching on fold, outer touch, rotation on both screens
 - ✅ Brightness on both screens (outer follows the slider live)
 - ✅ Screen on/off and lock screen on both screens
+- ☐ Double-tap to wake (inner and outer screen)
 - ✅ Half-fold doesn't glitch
 - ⚠️ Adaptive refresh doesn't ramp up to 120 Hz on its own — workaround: Settings → Display → **Minimum refresh rate = 120 Hz** (smooth, costs some battery)
 - ✅ Flex mode in apps (YouTube half-folded)
