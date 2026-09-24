@@ -1,0 +1,22 @@
+android_app {
+    name: "PhhIms",
+    srcs: ["app/src/main/java/**/*.kt", "app/src/main/java/**/*.java"],
+    resource_dirs: ["app/src/main/res"],
+    manifest: "app/src/main/AndroidManifest.xml",
+    certificate: "platform",
+    privileged: true,
+    platform_apis: true,
+    static_libs: [
+      "com.google.android.material_material",
+      "kotlinx-coroutines-android",
+    ],
+    required: ["PhhImsOverlay"],
+}
+
+runtime_resource_overlay {
+  name: "PhhImsOverlay",
+  resource_dirs: ["overlay/res"],
+  manifest: "overlay/AndroidManifest.xml",
+  certificate: "platform",
+  product_specific: true,
+}

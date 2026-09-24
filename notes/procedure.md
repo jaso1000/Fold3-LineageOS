@@ -54,7 +54,7 @@ test checklist live in the [README](../README.md); what must be baked into a rea
   in vendor are fine, except every state is AND-gated on a `<lid-switch>` condition and the lid
   switch stays "open" forever, so CLOSE is unreachable.
 - **Fix**: `/vendor/etc/devicestate/device_state_configuration.xml` = Samsung's `sec/` 6-state
-  sensor config with the `<lid-switch>` conditions removed (hand-patched vendor image).
+  sensor config with the `<lid-switch>` conditions removed (`scripts/make-vendor-image.sh`).
 - **Verify**: `dumpsys device_state` → CLOSE when folded; `dumpsys display` → outer ON/active.
 - **Current image (2026-09-24)**: stock **JJZH3** vendor (final firmware, vendor patch 2026-08-05)
   with only this one file replaced (mode 0644, root, `u:object_r:vendor_configs_file:s0`), via
@@ -103,7 +103,7 @@ BiTGApps Core doesn't pre-grant GSF: `pm grant com.google.android.gsf android.pe
   `cmd phone cc set-value -s 0 -p carrier_volte_available_bool true` (root, persistent);
   `setprop persist.sys.phh.ims.floss true`;
   `cmd overlay enable me.phh.treble.overlay.flossims_telephony`.
-- **Our build** (`phhusson/ims` main @ c180bdf + `patches/floss-ims/`, `scripts/make-floss-module.sh`):
+- **Our build** (source in `floss-ims/` = `phhusson/ims` main @ c180bdf + `patches/floss-ims/`, `scripts/make-floss-module.sh`):
   - handle a direct `200 OK`+SDP answer (start RTP, `callSessionInitiated`), send BYE on hangup,
     route remote BYE/rejects to the active call's listener;
   - `P-Access-Network-Info` from the serving LTE cell in REGISTER (Telstra 403s without it);

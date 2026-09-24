@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Build the "fold3-floss-ims" Magisk module: phh's Floss IMS (github.com/phhusson/ims, main)
-# with our Telstra fixes (branch fold3-telstra-outgoing in build/src/floss-ims), installed as
+# with our Telstra fixes (source in floss-ims/, changes vs upstream in patches/floss-ims/), installed as
 # a privileged app. See notes/procedure.md ("VoLTE calls").
 #
 # Why a priv-app: upstream's release APK is signed with the TrebleDroid key, which this GSI
@@ -10,12 +10,13 @@
 # One-time setup (already done on this machine):
 #   - build/src/floss-sdk: SDK with platforms;android-33 + build-tools;34.0.0, with
 #     android/telephony/ims/feature/MmTelFeature*.class deleted from android.jar (upstream README)
-#   - build/src/floss-ims/local.properties -> sdk.dir=<that SDK>
-#   - app/jniLibs/arm64-v8a/librnnoise_jni.so taken from phh's release APK (native build disabled)
+#   - floss-ims/local.properties -> sdk.dir=<that SDK> (gitignored)
+#   - app/jniLibs/arm64-v8a/librnnoise_jni.so is phh's prebuilt from his release APK (native
+#     build disabled; the rnnoise submodule isn't included)
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-SRC="$ROOT/build/src/floss-ims"
+SRC="$ROOT/floss-ims"
 BT="$ROOT/build/src/floss-sdk/build-tools/34.0.0"
 MOD="$ROOT/magisk-src/fold3-floss-ims"
 APKDIR="$MOD/system/priv-app/FlossIms"

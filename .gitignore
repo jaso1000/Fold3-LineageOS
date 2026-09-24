@@ -13,3 +13,6 @@ magisk-src/fold3-floss-ims/system/priv-app/
 magisk-src/fold3-fold-config/system/product/overlay/*.apk
 overlays/*/build/
 magisk-src/fold3-fingerprint-fix/*.dex
+
+# Committed prebuilt module zips (see prebuilt/README.md)
+!prebuilt/*.zip

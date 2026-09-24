@@ -7,7 +7,7 @@ currently delivered via Magisk that must be baked in. See notes/procedure.md for
 - [ ] libpowermanager miscpower mode -1 (outer touch) — source fix in phh's frameworks/native patch
 - [ ] Samsung Codec2 seccomp `mremap` rule (storage/media/fingerprint) — bind-mount at boot
 - [ ] device_state_configuration.xml lid-switch fix (dual-screen) — bind-mount at boot
-- [ ] Floss IMS (patched, patches/floss-ims) as priv-app + privapp-permissions + hidden-API exemptions
+- [ ] Floss IMS (`floss-ims/`) as priv-app + privapp-permissions + hidden-API exemptions
 - [ ] GSF runtime permissions (default-permissions XML)
 - [ ] `pm disable com.android.phone/.security.SafetySourceReceiver` (boot ANR mitigation) — or fix properly
 - [ ] IMS APN + carrier_volte_available: make automatic per SIM, not hand-set for 505-01

@@ -12,8 +12,9 @@ all updates for the Fold3 in September 2026.
 
 LineageOS 23.2 (Android 16) TrebleDroid GSI + BiTGApps Core, rooted with Magisk, on the stock
 Samsung A15 vendor (`F926BXXSJJZH3`). Nearly everything works, including **VoLTE calls on
-Telstra/Boost** and both screens. Fixes are delivered as small Magisk modules, built by
-`scripts/` or kept in `magisk-src/`; the root-cause writeups are in
+Telstra/Boost** and both screens. Fixes are delivered as small Magisk modules (ready-made zips in
+[`prebuilt/`](prebuilt/), sources in `magisk-src/` and `scripts/`, the patched VoLTE app in
+[`floss-ims/`](floss-ims/)); the root-cause writeups are in
 [notes/procedure.md](notes/procedure.md), and what still has to happen for a real ROM build is in
 [notes/rom-packaging-todo.md](notes/rom-packaging-todo.md).
 
@@ -21,7 +22,7 @@ Telstra/Boost** and both screens. Fixes are delivered as small Magisk modules, b
 
 | Problem | Root cause (short) | Fix | Where |
 |---|---|---|---|
-| Outer screen stuck on the boot logo / no display switching | `<lid-switch>` condition in Samsung's device-state config never true | Edited `device_state_configuration.xml` in vendor | hand-patched vendor image |
+| Outer screen stuck on the boot logo / no display switching | `<lid-switch>` condition in Samsung's device-state config never true | Edited `device_state_configuration.xml` in vendor | vendor image built by `scripts/make-vendor-image.sh` |
 | Outer touchscreen dead | GSI calls Samsung miscpower HAL with hard-coded "main display" mode | Patch 2 instructions in `libpowermanager.so` (mode -1) | module `fold3-outer-touch` (`scripts/make-outer-touch-module.sh`) |
 | No `/sdcard`, no media/"speakers", Google sign-in fails, fingerprint gone | Samsung Codec2 HAL killed by its seccomp policy (`mremap`), hanging MediaCodecList and StorageManagerService | Widen that one seccomp rule | module `fold3-media-c2-seccomp` (`scripts/make-media-c2-seccomp-module.sh`) |
 | Google sign-in "Checking info" | GSF missing runtime permissions (BiTGApps Core) | `pm grant` GSF permissions | manual (TODO: default-permissions XML) |
@@ -131,17 +132,19 @@ Don't `ctl.restart ril-daemon` to fix a slow phone start — it breaks the finge
 4. **Format Data**, reboot.
 
 **4. Dual-screen vendor fix**
-Replace `/vendor/etc/devicestate/device_state_configuration.xml` with Samsung's own
-`/vendor/etc/devicestate/sec/device_state_configuration.xml` **with every `<lid-switch>`
-condition removed**, on a copy of your stock `vendor.img` (grow it by 64 KiB first), and flash it
-via Install Image → Vendor. Details: [notes/procedure.md](notes/procedure.md#dual-screen-switching-vendor-edit).
+Extract the stock `vendor.img` from the JJZH3 AP (`super.img.lz4` → `lz4 -d` → `simg2img` →
+`lpunpack -p vendor`), then run `scripts/make-vendor-image.sh vendor.img vendor-patched.img`. That
+replaces `/vendor/etc/devicestate/device_state_configuration.xml` with Samsung's own `sec/` version
+**with every `<lid-switch>` condition removed**. Flash it from TWRP (Install Image → Vendor, or
+`dd` to `/dev/block/mapper/vendor`). Details: [notes/procedure.md](notes/procedure.md#dual-screen-switching-vendor-edit).
 
 **5. Root + fixes**
 1. Extract `boot.img` from the **exact** firmware your phone runs (samloader), patch it with
    [Magisk](https://github.com/topjohnwu/Magisk), flash via Install Image → Boot, open the Magisk
    app once. (A boot.img from any other firmware version fails Samsung's "Secure check".)
-2. Build and install this repo's Magisk modules (see the table above; `scripts/make-*-module.sh`
-   and `magisk-src/`), then do the manual steps listed in the table (GSF permissions, IMS APN +
+2. Install this repo's Magisk modules: the zips in [`prebuilt/`](prebuilt/) (or rebuild them with
+   `scripts/make-*-module.sh`), plus `fold3-media-c2-seccomp`, which you build from your own phone
+   with `scripts/make-media-c2-seccomp-module.sh`. Then do the manual steps listed in the table (GSF permissions, IMS APN +
    `carrier_volte_available`, disabling `SafetySourceReceiver`).
 3. Calls: the Floss IMS module + carrier setup in
    [notes/procedure.md](notes/procedure.md#volte-calls--module-fold3-floss-ims--manual-carrier-setup).
@@ -155,8 +158,9 @@ via Install Image → Vendor. Details: [notes/procedure.md](notes/procedure.md#d
 ## Tooling
 
 - adb/fastboot: `~/Android/sdk/platform-tools/` (not on PATH by default); root shell via `adb shell su -c`.
-- Module builders: `scripts/make-*-module.sh`; Floss IMS source + patches in `build/src/floss-ims`
-  and `patches/floss-ims/`; framework overlay source in `overlays/`.
+- Module builders: `scripts/make-*-module.sh`, `scripts/make-overlays.sh`, `scripts/make-vendor-image.sh`;
+  prebuilt zips in `prebuilt/`; Floss IMS source in `floss-ims/` (GPLv2, phh), our changes vs
+  upstream `phhusson/ims@c180bdf` as patches in `patches/floss-ims/`; overlay source in `overlays/`.
 - Floss build SDK: `build/src/floss-sdk` (android-33 platform with MmTelFeature stripped, build-tools 34).
 - Laptop: Surface, Arch Linux (Omarchy).
 
