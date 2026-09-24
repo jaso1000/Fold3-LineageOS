@@ -1,6 +1,6 @@
 id=fold3-fingerprint-fix
 name=Fold3 fingerprint active-group keeper
-version=v2
-versionCode=2
+version=v3
+versionCode=3
 author=jason
 description=Samsung fingerprint HAL loses its active user after boot / HAL or rild restarts; the framework then drops the enrollment at boot. Re-send setActiveGroup(0, /data/vendor_de/0/fpdata) as soon as the HAL starts and after every restart.

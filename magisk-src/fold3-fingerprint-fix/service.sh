@@ -7,13 +7,19 @@
 # (before system_server gets to it), again whenever the HAL restarts, and after rild restarts.
 MODDIR=${0%/*}
 HAL=vendor.samsung.hardware.biometrics.fingerprint@3.0-service
+LOG=/data/local/tmp/fold3-fp.log
 set_group() {
-    CLASSPATH=$MODDIR/fpactive.dex:/system/framework/services.jar \
-        app_process /system/bin FpActiveGroup 0 /data/vendor_de/0/fpdata >/dev/null 2>&1
+    out=$(CLASSPATH=$MODDIR/fpactive.dex:/system/framework/services.jar \
+        app_process /system/bin FpActiveGroup 0 /data/vendor_de/0/fpdata 2>&1)
+    rc=$?
+    echo "$(date +%T.%N) set_group($1) hal=$(pidof $HAL) rc=$rc ${out}" >> $LOG
 }
+# logcat gets cleared early in boot, so keep our own log (last boot kept as .prev)
+mv -f $LOG $LOG.prev 2>/dev/null
+echo "$(date +%T.%N) start, hal=$(pidof $HAL)" >> $LOG
 until [ -n "$(pidof $HAL)" ]; do sleep 0.2; done
 sleep 0.5
-set_group
+set_group initial
 lastfp=$(pidof $HAL)
 lastril=$(pidof rild)
 while true; do
@@ -21,13 +27,13 @@ while true; do
     fp=$(pidof $HAL)
     if [ -n "$fp" ] && [ "$fp" != "$lastfp" ]; then
         sleep 0.3
-        set_group
+        set_group hal-restart
         lastfp=$fp
     fi
     ril=$(pidof rild)
     if [ -n "$ril" ] && [ "$ril" != "$lastril" ]; then
         sleep 20
-        set_group
+        set_group rild-restart
         lastril=$ril
     fi
 done

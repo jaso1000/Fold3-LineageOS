@@ -7,6 +7,9 @@ Device: Samsung Galaxy Z Fold3, SM-F926B (Australian variant), codename **q2q**,
 
 ## Status: Android 16 daily driver (updated 2026-09-24)
 
+Running on Samsung's **final** Fold3 firmware, F926BXXSJJZH3 (August 2026 patch). Samsung ended
+all updates for the Fold3 in September 2026.
+
 LineageOS 23.2 (Android 16) TrebleDroid GSI + BiTGApps Core, rooted with Magisk, on the stock
 Samsung A15 vendor (`F926BXXSJJZH3`). Nearly everything works, including **VoLTE calls on
 Telstra/Boost** and both screens. Fixes are delivered as small Magisk modules, built by

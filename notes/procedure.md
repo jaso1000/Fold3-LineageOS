@@ -56,6 +56,17 @@ test checklist live in the [README](../README.md); what must be baked into a rea
 - **Fix**: `/vendor/etc/devicestate/device_state_configuration.xml` = Samsung's `sec/` 6-state
   sensor config with the `<lid-switch>` conditions removed (hand-patched vendor image).
 - **Verify**: `dumpsys device_state` → CLOSE when folded; `dumpsys display` → outer ON/active.
+- **Current image (2026-09-24)**: stock **JJZH3** vendor (final firmware, vendor patch 2026-08-05)
+  with only this one file replaced (mode 0644, root, `u:object_r:vendor_configs_file:s0`), via
+  `debugfs -w` (rm / write / set_inode_field / ea_set), flashed from TWRP with
+  `dd of=/dev/block/mapper/vendor`. The JJZH3 vendor is exactly the partition size. Before this the
+  vendor was still ZE5 (May) under a JJZH3 kernel. The stock device_state and c2 seccomp files
+  are identical between ZE5 and JJZH3.
+- After flashing from TWRP the phone may boot back into recovery once; use TWRP's
+  Reboot → System.
+- Harmless: `qmi_helpers: disagrees about version of symbol module_layout` in dmesg comes from
+  netmgrd.rc also running `modprobe -d /vendor/lib/modules/5.4-gki rmnet_shs` (the GKI variant)
+  after the qgki one succeeds. Stock does the same.
 
 ### Outer touchscreen — module `fold3-outer-touch`
 - **Cause**: Samsung's `vendor.samsung.hardware.miscpower@2.0` HAL enables/disables touch panels
@@ -156,6 +167,13 @@ BiTGApps Core doesn't pre-grant GSF: `pm grant com.google.android.gsf android.pe
   as soon as the HAL process exists (before system_server uses it), again on every HAL PID change,
   and 20 s after any rild PID change. A HAL template the framework lost is re-added by the next
   boot cleanup once the HAL enumerates correctly. Also: stop manually restarting rild.
+- **Debugging**: logcat is cleared early in boot (even the HAL's own lines vanish), so the keeper
+  logs to `/data/local/tmp/fold3-fp.log` (`.prev` = previous boot). A good boot looks like
+  `set_group(initial) ... -> 0` a few seconds before the framework's `Fingerprint HAL ready`.
+- **Remaining race**: if the HAL still dies during boot, app_process takes ~1.5 s to re-send the
+  group while the framework re-enumerates ~1.4 s after the restart, so the enrollment can still
+  be dropped. A proper fix belongs in the framework (ROM build): send setActiveGroup before
+  the cleanup enumerate / after every HAL restart.
 
 ### Phone app / no network after boot (mitigated, manual)
 - **Cause**: at boot the phone process blocks in `IRadio.getService()` during rild's slow init;
