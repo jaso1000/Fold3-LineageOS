@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Aperture lens selection for Fold3. Needs persist.sys.phh.samsung.camera_ids=true so the
+     Samsung provider lists its hidden ids. Back: 0 main, 2 ultra-wide, 52 telephoto.
+     Front: 1 (routed to the cover or inner sensor by fold state).
+     Ignored: 3 inner UDC (duplicate of 1 when unfolded), 20/21/23 Samsung logical multi-cams,
+     71/73/92 alternate front modes. -->
+<resources>
+    <bool name="config_enableAuxCameras">true</bool>
+    <string-array name="config_ignoredAuxCameraIds" translatable="false">
+        <item>3</item>
+        <item>20</item>
+        <item>21</item>
+        <item>23</item>
+        <item>71</item>
+        <item>73</item>
+        <item>92</item>
+    </string-array>
+</resources>

@@ -26,6 +26,7 @@ Telstra/Boost** and both screens. Fixes are delivered as small Magisk modules, b
 | Phone app / no network after boot (ANR loop) | Phone blocks on slow rild init at startup | Disabled `com.android.phone/.security.SafetySourceReceiver`; recovers on its own now | manual `pm disable` (root cause still open) |
 | Hotspot "connected, no internet" | Tethering never starts a DNS proxy; clients' DNS goes nowhere | DNAT hotspot DNS to 8.8.8.8 | module `fold3-net-fixes` |
 | Cover-screen selfie camera shows the inner camera | GSI has no folded/open device-state config, so camera HAL never told "folded" | Framework RRO with fold states, postures and hinge feature | module `fold3-fold-config` (`overlays/Fold3FrameworkOverlay`) |
+| Only main camera usable; no ultra-wide / telephoto | Samsung's camera provider hides aux lenses from `getCameraIdList`; Aperture has aux cameras disabled | `persist.sys.phh.samsung.camera_ids=true` (GSI asks via `sehGetCameraIdList`) + Aperture RRO enabling aux cameras, ignoring logical/duplicate ids | module `fold3-fold-config` (`overlays/Fold3ApertureOverlay`, `scripts/make-overlays.sh`) |
 | Outer screen brightness never changes | Only one backlight light (inner); Samsung HWC ignores per-display brightness | Helper mirrors live brightness to `panel1-backlight` | module `fold3-fold-config` (`service.sh`) |
 | Fingerprint sensor stops detecting / enrollment lost | Samsung HAL loses its active user after boot and after every rild restart; Android only sends `setActiveGroup` once | Re-send `setActiveGroup` ~30 s after boot and after rild restarts | module `fold3-fingerprint-fix` (`tools/fp-active-group/`) |
 
@@ -66,7 +67,8 @@ Don't `ctl.restart ril-daemon` to fix a slow phone start — it breaks the finge
 **Audio, camera & media**
 - ✅ Speakers / media playback, microphone, screen recording, volume keys
 - ✅ Rear main camera, inner (under-display) selfie, cover-screen selfie, flashlight
-- ☐ Other rear lenses (ultra-wide / tele), video recording with sound
+- ✅ Ultra-wide and telephoto selectable in Aperture
+- ☐ Photos/video from each lens, video recording with sound
 - ☐ Wired / USB-C headphones
 
 **Sensors & hardware**

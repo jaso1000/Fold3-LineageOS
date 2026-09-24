@@ -1,0 +1,2 @@
+# Samsung camera provider: list hidden ids (ultra-wide/tele/logical) via sehGetCameraIdList
+persist.sys.phh.samsung.camera_ids=true

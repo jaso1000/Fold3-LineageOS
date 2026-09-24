@@ -162,6 +162,16 @@ BiTGApps Core doesn't pre-grant GSF: `pm grant com.google.android.gsf android.pe
   `config_device_state_postures` 0:1 1:2 2:2 3:3, hinge `fold-[884,0,884,2208]`.
   Camera ids: 0 back main, 1 front (cover when folded), 2 back, 3 front UDC, 4 secure (face).
 
+### Ultra-wide / telephoto — module `fold3-fold-config` (system.prop + Aperture RRO)
+- **Cause**: Samsung's provider only returns ids 0-4 from `getCameraIdList`; the rest are only
+  in `ISehCameraProvider::sehGetCameraIdList`. Aperture also ships `config_enableAuxCameras=false`.
+  (`persist.sys.phh.include_all_cameras` does nothing here.)
+- **Fix**: `persist.sys.phh.samsung.camera_ids=true` makes the GSI's cameraserver use the Samsung
+  list: 0 main (5 mm), 2 ultra-wide (1.74 mm), 52 tele (6 mm), 20/21/23 logical multi-cams,
+  1 front (fold-routed), 3 inner UDC, 4 secure, 71/73/92 alt front modes. Aperture RRO
+  (`overlays/Fold3ApertureOverlay`) enables aux cameras and ignores 3, 20, 21, 23, 71, 73, 92.
+  Build overlays with `scripts/make-overlays.sh`.
+
 ### Outer screen brightness — module `fold3-fold-config` (service.sh)
 - **Cause**: Lights HAL has one backlight light, attached to the first (inner) display only;
   Samsung HWC ignores per-display brightness (the `canSetBrightnessViaHwc` quirk in
