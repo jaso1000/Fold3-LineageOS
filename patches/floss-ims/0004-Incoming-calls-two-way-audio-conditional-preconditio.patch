@@ -1,7 +1,7 @@
 From 312043159ace1b13a416b606308ffdb53e429c46 Mon Sep 17 00:00:00 2001
 From: Jason Walker <59085866+jaso1000@users.noreply.github.com>
 Date: Thu, 24 Sep 2026 20:55:20 +1000
-Subject: [PATCH 4/4] Incoming calls + two-way audio: conditional
+Subject: [PATCH 4/5] Incoming calls + two-way audio: conditional
  preconditions, caller ID, callee BYE, VoIP audio mode, RNNoise bypass + AGC
 
 - Incoming 183/200: only Require/offer QoS preconditions if the caller offered them

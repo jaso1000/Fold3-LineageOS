@@ -125,6 +125,10 @@ BiTGApps Core doesn't pre-grant GSF: `pm grant com.google.android.gsf android.pe
   2. RNNoise (48 kHz model) fed 8 kHz audio output pure silence → bypassed.
   3. Capture level ~-50 dBFS → simple AGC (target ~2500 rms, max 32×). Confirmed clear.
 
+- **Callbacks / +61 numbers never connected** (patch 0005): Floss appended `;phone-context=` to
+  every tel URI; for a global `+CC` number that's invalid (RFC 3966) and Telstra silently drops
+  the INVITE (no 100 Trying; hang-up gets 481). Global numbers now go as plain `tel:+61...`.
+
 ### Fingerprint keeps losing its user — module `fold3-fingerprint-fix`
 - **Cause**: Samsung's HAL drops its active group after boot and after every **rild restart**
   (modem restart resets its secure-world session: `BAuth_SessionClose Fail`), then rejects

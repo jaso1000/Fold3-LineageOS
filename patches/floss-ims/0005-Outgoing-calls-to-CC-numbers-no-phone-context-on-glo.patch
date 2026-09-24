@@ -1,0 +1,36 @@
+From 8f9cf08aa159db72eddc3e73bb8c837ebe243154 Mon Sep 17 00:00:00 2001
+From: Jason Walker <59085866+jaso1000@users.noreply.github.com>
+Date: Thu, 24 Sep 2026 21:02:59 +1000
+Subject: [PATCH 5/5] Outgoing calls to +CC numbers: no phone-context on global
+ tel URIs
+
+RFC 3966: a global number is a complete tel URI; Telstra silently dropped INVITEs to
+tel:+61...;phone-context=... (no 100 Trying), which broke every callback from the call log
+or contacts stored with +61. Also strip visual separators from dialed numbers.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ app/src/main/java/me/phh/sip/SipHandler.kt | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/app/src/main/java/me/phh/sip/SipHandler.kt b/app/src/main/java/me/phh/sip/SipHandler.kt
+index 1165a41..0e7d69c 100644
+--- a/app/src/main/java/me/phh/sip/SipHandler.kt
++++ b/app/src/main/java/me/phh/sip/SipHandler.kt
+@@ -1219,7 +1219,12 @@ a=fmtp:$dtmfTrack 0-15
+ a=sendrecv
+                        """.trim().toByteArray()
+ 
+-            val to = "tel:$phoneNumber;phone-context=ims.mnc$mnc.mcc$mcc.3gppnetwork.org"
++            // RFC 3966: a global number (+CC...) is a complete tel URI and must NOT carry a
++            // phone-context; Telstra silently drops such INVITEs (no 100 Trying at all).
++            // Local/short numbers keep the home-network phone-context. Strip visual separators.
++            val dialed = phoneNumber.filter { it.isDigit() || it == '+' || it == '*' || it == '#' }
++            val to = if (dialed.startsWith("+")) "tel:$dialed"
++                     else "tel:$dialed;phone-context=ims.mnc$mnc.mcc$mcc.3gppnetwork.org"
+             val sipInstance = "<urn:gsma:imei:${imei.substring(0, 8)}-${imei.substring(8, 14)}-0>"
+             val local =
+                 if(socket.gLocalAddr() is Inet6Address)
+-- 
+2.55.0
+
