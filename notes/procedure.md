@@ -718,3 +718,17 @@ in-call audio once IMS/calls are sorted.
 fingerprint HAL depended on the same storage/user-unlock completion that the codec hang was
 blocking. So the earlier "fingerprint only works on Android-14 GSIs" pattern was probably this
 bug, not an Android-version limit.
+
+## Outer-screen boot logo: FIXED (2026-09-24)
+
+Booting unfolded left the Samsung splash on the outer panel until the first fold: Android
+marks the outer display OFF and never commits a frame to it, so the display driver keeps the
+bootloader's continuous-splash image up (Android-side `dumpsys display` showed the outer
+display `mState=OFF` while the panel still visibly showed the logo).
+
+Fix: Magisk module `fold3-boot-splash` (source in `magisk-src/fold3-boot-splash/`, a
+`service.sh` only). After `sys.boot_completed`, if device state is OPEN/HALF_FOLDED it runs
+`cmd device_state state 0; sleep 1.5; cmd device_state state reset` — one forced
+CLOSE→sensor cycle, which gives the outer display a real frame then turns it off properly.
+Verified afterwards: `Override Request active: false`, state back to sensor-driven OPEN.
+**User confirmed** the logo now clears on its own (inner screen blinks briefly once at boot).
