@@ -138,10 +138,15 @@ BiTGApps Core doesn't pre-grant GSF: `pm grant com.google.android.gsf android.pe
 ### Fingerprint keeps losing its user — module `fold3-fingerprint-fix`
 - **Cause**: Samsung's HAL drops its active group after boot and after every **rild restart**
   (modem restart resets its secure-world session: `BAuth_SessionClose Fail`), then rejects
-  enroll/auth with `gid != m_active_group -1`; boot cleanup may then delete the enrolment.
+  enroll/auth with `gid != m_active_group -1`. The secure app (`securefp`) isn't even loaded until
+  `setActiveGroup`. At boot keyguard starts a detect before that, the HAL dies, restarts empty, and
+  the framework's boot cleanup enumerates 0 templates and deletes "Finger 1" from
+  `settings_fingerprint.xml` (log: `Removing dangling template from framework`).
 - **Fix**: `service.sh` runs a tiny dex (`tools/fp-active-group/FpActiveGroup.java`, via
   `app_process` + services.jar's HIDL class) calling `setActiveGroup(0, /data/vendor_de/0/fpdata)`
-  ~30 s after boot and 20 s after any rild PID change. Also: stop manually restarting rild.
+  as soon as the HAL process exists (before system_server uses it), again on every HAL PID change,
+  and 20 s after any rild PID change. A HAL template the framework lost is re-added by the next
+  boot cleanup once the HAL enumerates correctly. Also: stop manually restarting rild.
 
 ### Phone app / no network after boot (mitigated, manual)
 - **Cause**: at boot the phone process blocks in `IRadio.getService()` during rild's slow init;
@@ -159,7 +164,9 @@ BiTGApps Core doesn't pre-grant GSF: `pm grant com.google.android.gsf android.pe
 - **Cause**: the GSI's `config_foldedDeviceStates` etc. are empty, so CameraService reports
   NORMAL to the camera HAL and Samsung's HAL keeps camera id 1 on the inner UDC sensor.
 - **Fix**: framework RRO `overlays/Fold3FrameworkOverlay`: folded [0], halfFolded [1,2], open [3],
-  `config_device_state_postures` 0:1 1:2 2:2 3:3, hinge `fold-[884,0,884,2208]`.
+  `config_device_state_postures` 0:1 1:2 2:2 3:3, hinge `fold-[884,0,884,2208]`
+  (`config_display_features` is a `<string>` in AOSP; as a string-array the RRO silently didn't
+  apply and apps like YouTube never got a FoldingFeature).
   Camera ids: 0 back main, 1 front (cover when folded), 2 back, 3 front UDC, 4 secure (face).
 
 ### Ultra-wide / telephoto — module `fold3-fold-config` (system.prop + Aperture RRO)

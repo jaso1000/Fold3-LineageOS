@@ -1,6 +1,6 @@
 id=fold3-fold-config
 name=Fold3 fold configuration overlay
-version=v4
-versionCode=4
+version=v5
+versionCode=5
 author=jason
 description=Framework RRO (fold states, postures, hinge: cover selfie camera, Flex mode), Aperture RRO + Samsung hidden camera ids (ultra-wide/tele), outer display brightness via HWC.

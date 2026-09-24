@@ -25,10 +25,10 @@ Telstra/Boost** and both screens. Fixes are delivered as small Magisk modules, b
 | No calls (Telstra has no 3G) | No IMS stack usable with Samsung's vendor | phh's Floss IMS, **patched**: direct-200/early-media handling, conditional preconditions, RFC 3966 `+CC` numbers, SMS SMSC decoding, BYE both directions, caller ID, real P-ANI, VoIP audio mode, RNNoise bypass + AGC, jitter buffer, all AMR modes, DTMF, re-register alarm, priv-app permissions | module `fold3-floss-ims` (`patches/floss-ims/`, `scripts/make-floss-module.sh`) + IMS APN + `carrier_volte_available` override |
 | Phone app / no network after boot (ANR loop) | Phone blocks on slow rild init at startup | Disabled `com.android.phone/.security.SafetySourceReceiver`; recovers on its own now | manual `pm disable` (root cause still open) |
 | Hotspot "connected, no internet" | Tethering never starts a DNS proxy; clients' DNS goes nowhere | DNAT hotspot DNS to 8.8.8.8 | module `fold3-net-fixes` |
-| Cover-screen selfie camera shows the inner camera | GSI has no folded/open device-state config, so camera HAL never told "folded" | Framework RRO with fold states, postures and hinge feature | module `fold3-fold-config` (`overlays/Fold3FrameworkOverlay`) |
+| Cover-screen selfie camera shows the inner camera; no Flex mode in apps | GSI has no folded/open device-state config, so camera HAL never told "folded" | Framework RRO with fold states, postures and hinge feature (`config_display_features` is a plain string, not an array) | module `fold3-fold-config` (`overlays/Fold3FrameworkOverlay`) |
 | Only main camera usable; no ultra-wide / telephoto | Samsung's camera provider hides aux lenses from `getCameraIdList`; Aperture has aux cameras disabled | `persist.sys.phh.samsung.camera_ids=true` (GSI asks via `sehGetCameraIdList`) + Aperture RRO enabling aux cameras, ignoring logical/duplicate ids | module `fold3-fold-config` (`overlays/Fold3ApertureOverlay`, `scripts/make-overlays.sh`) |
 | Outer screen brightness never changes | Only one backlight light (inner); Samsung HWC ignores per-display brightness | Helper mirrors live brightness to `panel1-backlight` | module `fold3-fold-config` (`service.sh`) |
-| Fingerprint sensor stops detecting / enrollment lost | Samsung HAL loses its active user after boot and after every rild restart; Android only sends `setActiveGroup` once | Re-send `setActiveGroup` ~30 s after boot and after rild restarts | module `fold3-fingerprint-fix` (`tools/fp-active-group/`) |
+| Fingerprint sensor stops detecting / enrollment lost | Samsung HAL loses its active user after boot and after every rild restart; Android only sends `setActiveGroup` once | Re-send `setActiveGroup` the moment the HAL starts (before system_server touches it), on every HAL restart, and after rild restarts | module `fold3-fingerprint-fix` (`tools/fp-active-group/`) |
 
 Disabled: `fold3-boot-splash` (cleared the outer-screen boot logo but killed the fingerprint HAL).
 Recovery if a module ever breaks boot: hold **Volume Down** during boot = Magisk safe mode.
@@ -61,7 +61,7 @@ Don't `ctl.restart ril-daemon` to fix a slow phone start — it breaks the finge
 - ✅ Screen on/off and lock screen on both screens
 - ✅ Half-fold doesn't glitch
 - ⚠️ Adaptive refresh doesn't ramp up to 120 Hz on its own — workaround: Settings → Display → **Minimum refresh rate = 120 Hz** (smooth, costs some battery)
-- ☐ Flex mode in apps (e.g. YouTube half-folded)
+- ✅ Flex mode in apps (YouTube half-folded)
 - ⚠️ Samsung logo stays on the outer screen after an unfolded boot until the first fold
 
 **Audio, camera & media**

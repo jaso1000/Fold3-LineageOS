@@ -24,8 +24,7 @@
         <item>2:2</item>
         <item>3:3</item>
     </string-array>
-    <!-- Hinge on the inner 1768x2208 panel, vertical at the middle -->
-    <string-array name="config_display_features">
-        <item>fold-[884,0,884,2208]</item>
-    </string-array>
+    <!-- Hinge on the inner 1768x2208 panel, vertical at the middle. This is a plain string in
+         AOSP (not a string-array); a type mismatch makes the RRO entry silently not apply. -->
+    <string name="config_display_features" translatable="false">fold-[884,0,884,2208]</string>
 </resources>
