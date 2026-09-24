@@ -1,7 +1,7 @@
 From 7fae8a3c375dad837bebd7f6552c4c9974d4b746 Mon Sep 17 00:00:00 2001
 From: Jason Walker <59085866+jaso1000@users.noreply.github.com>
 Date: Thu, 24 Sep 2026 12:34:46 +1000
-Subject: [PATCH 2/2] Don't offer QoS preconditions in outgoing INVITE (Telstra
+Subject: [PATCH 2/3] Don't offer QoS preconditions in outgoing INVITE (Telstra
  400s them)
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>

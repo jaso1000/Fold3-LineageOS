@@ -1,0 +1,222 @@
+From 860d82815fd9c3526a25ce256d8fe8078f44d867 Mon Sep 17 00:00:00 2001
+From: Jason Walker <59085866+jaso1000@users.noreply.github.com>
+Date: Thu, 24 Sep 2026 16:23:07 +1000
+Subject: [PATCH 3/3] Audio jitter headroom + all AMR modes, RFC 4733 DTMF, fix
+ periodic re-register alarm
+
+- Playback: ~200 ms AudioTrack buffer pre-filled with 100 ms silence (LTE delivers RTP
+  in bursts), accept AMR-NB FT 0..7 with the real Q bit, drain all decoder output
+- DTMF: start/stop/sendDtmf queue digits; encode thread sends RFC 4733 telephone-event
+  packets (100 ms + 3x end) in place of voice frames, sharing seq/SSRC
+- Periodic REGISTER alarm used an implicit broadcast that never reaches the
+  RECEIVER_NOT_EXPORTED receiver outside android.uid.system: make it explicit, 30 min
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ app/src/main/java/me/phh/ims/PhhImsService.kt | 11 ++-
+ .../main/java/me/phh/ims/PhhMmTelFeature.kt   | 25 ++++++
+ app/src/main/java/me/phh/sip/SipHandler.kt    | 78 +++++++++++++++++--
+ 3 files changed, 102 insertions(+), 12 deletions(-)
+
+diff --git a/app/src/main/java/me/phh/ims/PhhImsService.kt b/app/src/main/java/me/phh/ims/PhhImsService.kt
+index 8fea1d6..e61571b 100644
+--- a/app/src/main/java/me/phh/ims/PhhImsService.kt
++++ b/app/src/main/java/me/phh/ims/PhhImsService.kt
+@@ -35,14 +35,17 @@ class PhhImsService : ImsService() {
+     }
+     fun armPeriodicRegisterAlarm() {
+         val alarmManager = this.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+-        val intent = Intent(receiver.ALARM_PERIODIC_REGISTER)
++        // Must be explicit: implicit broadcasts don't reach a RECEIVER_NOT_EXPORTED receiver
++        // (only worked before because the app ran as android.uid.system), and without the
++        // periodic REGISTER the registration lapses after the network's 1 h expiry.
++        val intent = Intent(receiver.ALARM_PERIODIC_REGISTER).setPackage(packageName)
+         val pendingIntent =
+             PendingIntent.getBroadcast(this, 0, intent, PendingIntent.FLAG_IMMUTABLE)
+-        // We want recurring 3000s but recurring alarms don't wake up from
+-        // doze: alarm will re-arm itself.
++        // Re-register every 30 min (networks commonly grant 3600 s). Recurring alarms don't
++        // wake up from doze, so the alarm re-arms itself.
+         alarmManager.setAndAllowWhileIdle(
+             AlarmManager.ELAPSED_REALTIME_WAKEUP,
+-            SystemClock.elapsedRealtime() + 3_000_000,
++            SystemClock.elapsedRealtime() + 1_800_000,
+             pendingIntent
+         )
+         Rlog.d(TAG, "Alarm set")
+diff --git a/app/src/main/java/me/phh/ims/PhhMmTelFeature.kt b/app/src/main/java/me/phh/ims/PhhMmTelFeature.kt
+index 6ba04d1..1baf1cd 100644
+--- a/app/src/main/java/me/phh/ims/PhhMmTelFeature.kt
++++ b/app/src/main/java/me/phh/ims/PhhMmTelFeature.kt
+@@ -90,6 +90,19 @@ class PhhMmTelFeature(val slotId: Int) : PhhMmTelFeatureProtected(slotId) {
+                 sipHandler.hangupOutgoingCall()
+                 mListener.callSessionTerminated(ImsReasonInfo(ImsReasonInfo.CODE_USER_TERMINATED, 0, "Kikoo"))
+             }
++
++            override fun sendDtmf(c: Char, result: android.os.Message?) {
++                sipHandler.sendDtmf(c)
++                result?.sendToTarget()
++            }
++
++            override fun startDtmf(c: Char) {
++                sipHandler.sendDtmf(c)
++            }
++
++            override fun stopDtmf() {
++                // Each digit is sent as a fixed 100 ms event
++            }
+         }
+     }
+ 
+@@ -203,6 +216,18 @@ class PhhMmTelFeature(val slotId: Int) : PhhMmTelFeatureProtected(slotId) {
+                     sipHandler.terminateCall()
+                     Rlog.d(TAG, "Terminating call")
+                 }
++                override fun sendDtmf(c: Char, result: android.os.Message?) {
++                    sipHandler.sendDtmf(c)
++                    result?.sendToTarget()
++                }
++
++                override fun startDtmf(c: Char) {
++                    sipHandler.sendDtmf(c)
++                }
++
++                override fun stopDtmf() {
++                    // Each digit is sent as a fixed 100 ms event
++                }
+ 
+             }, Bundle())
+         }
+diff --git a/app/src/main/java/me/phh/sip/SipHandler.kt b/app/src/main/java/me/phh/sip/SipHandler.kt
+index cc14064..5aa6b57 100644
+--- a/app/src/main/java/me/phh/sip/SipHandler.kt
++++ b/app/src/main/java/me/phh/sip/SipHandler.kt
+@@ -859,6 +859,10 @@ a=sendrecv
+             audioRecord.startRecording()
+ 
+             var firstPacket = true
++            var dtmfEvent = -1
++            var dtmfPackets = 0
++            var dtmfStartTimestamp = 0
++            dtmfQueue.clear()
+ 
+             val bufferSize = ((minBufferSize + (rnnNoise.getFrameSize() - 1 )) / rnnNoise.getFrameSize()).toInt() * rnnNoise.getFrameSize()
+             val buffer = ByteArray(bufferSize)
+@@ -890,6 +894,41 @@ a=sendrecv
+                     while(bufPos < outBufInfo.size) {
+                         val frameSize = 32 // Read from encoderData[0]
+ 
++                        // RFC 4733 DTMF: while a digit plays, its event packets replace voice frames
++                        if (dtmfEvent < 0) {
++                            val next = dtmfQueue.poll()
++                            if (next != null) {
++                                dtmfEvent = next
++                                dtmfPackets = 0
++                                dtmfStartTimestamp = sequenceNumber * 160
++                            }
++                        }
++                        if (dtmfEvent >= 0) {
++                            dtmfPackets++
++                            // 5 packets of tone (100 ms), then the end packet sent 3 times
++                            val end = dtmfPackets > 5
++                            val duration = minOf(dtmfPackets, 5) * 160
++                            val header = listOf(
++                                0x80,
++                                (if (dtmfPackets == 1) 0x80 else 0) or call.dtmfTrack,
++                                (sequenceNumber shr 8) and 0xff, sequenceNumber and 0xff,
++                                (dtmfStartTimestamp shr 24) and 0xff, (dtmfStartTimestamp shr 16) and 0xff,
++                                (dtmfStartTimestamp shr 8) and 0xff, dtmfStartTimestamp and 0xff,
++                                0x03, 0x00, 0xd2, 0x00, //SSRC
++                            )
++                            val payload = listOf(
++                                dtmfEvent,
++                                (if (end) 0x80 else 0) or 10, // E bit, volume -10 dBm0
++                                (duration shr 8) and 0xff, duration and 0xff,
++                            )
++                            val buf = (header + payload).map { it.toByte() }.toByteArray()
++                            call.rtpSocket.send(DatagramPacket(buf, buf.size, call.rtpRemoteAddr, call.rtpRemotePort))
++                            if (dtmfPackets >= 8) dtmfEvent = -1
++                            sequenceNumber++
++                            bufPos += frameSize
++                            continue
++                        }
++
+                         // Every 20ms, at 8kHz, we have 160 samples
+                         val timestamp = sequenceNumber * 160
+                         val rtpHeader = listOf(
+@@ -1354,7 +1393,12 @@ a=sendrecv
+         // Receiving thread
+         thread {
+             val minBufferSize = AudioTrack.getMinBufferSize(8000, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT)
+-            val audioTrack = AudioTrack(AudioManager.STREAM_VOICE_CALL, 8000, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT, minBufferSize, AudioTrack.MODE_STREAM)
++            // LTE delivers RTP in bursts (several packets, then ~40-60 ms of nothing); with only
++            // minBufferSize the track underruns between bursts. Keep ~200 ms of headroom and
++            // start with ~100 ms of silence so there's something to play while the first burst lands.
++            val bufferSize = maxOf(minBufferSize * 4, 8000 * 2 / 5)
++            val audioTrack = AudioTrack(AudioManager.STREAM_VOICE_CALL, 8000, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT, bufferSize, AudioTrack.MODE_STREAM)
++            audioTrack.write(ByteArray(8000 * 2 / 10), 0, 8000 * 2 / 10)
+             audioTrack.play()
+ 
+             val decoder = MediaCodec.createDecoderByType("audio/3gpp")
+@@ -1373,16 +1417,19 @@ a=sendrecv
+                 Rlog.d(TAG, "Received RTP data is length ${dgram.length} pt is $pt")
+ 
+                 val ft = (dgramBuf[13].toUByte().toUInt() shr 7) or ((dgramBuf[12].toUByte().toUInt() and (7).toUInt()) shl 1)
+-                Rlog.d(TAG, "Received RTP data (expecting AMR) ft is $ft")
+ 
+-                if(ft.toInt() != 7) continue
++                // Accept every AMR-NB speech mode (FT 0..7): the network lowers the rate on weak
++                // signal, and dropping those frames is heard as audio cutting out. FT 8 is SID
++                // (comfort noise) and 15 is NO_DATA; skip those.
++                if(ft.toInt() > 7) continue
++                val q = (dgramBuf[13].toUByte().toInt() shr 6) and 1
+ 
+                 // RTP header 12 byte
+                 // AMR in RTP header 10 bits
+-                // Packet size 32, FT=7
+                 val baOs = ByteArrayOutputStream()
+ 
+-                baOs.write( ft.toInt() shl 3)
++                // AMR storage-format header: FT and the Q (frame good) bit from the RTP TOC
++                baOs.write((ft.toInt() shl 3) or (q shl 2))
+ 
+                 var m = 0
+                 // Warning: we should take good care counting the **bits** of the packet based on FT
+@@ -1406,9 +1453,9 @@ a=sendrecv
+                 //TODO: Support DTX (comfort noise frames that don't repeat)
+                 //TODO: Can we receive multiple outs per in?
+                 val outBufInfo = MediaCodec.BufferInfo()
+-                val outBufIndex = decoder.dequeueOutputBuffer(outBufInfo, 0)
+-                //Rlog.d(TAG, "Got decoding output buffer $outBufIndex")
+-                if (outBufIndex >= 0) {
++                while (true) {
++                    val outBufIndex = decoder.dequeueOutputBuffer(outBufInfo, 0)
++                    if (outBufIndex < 0) break
+                     val outBuf = decoder.getOutputBuffer(outBufIndex)!!
+                     audioTrack.write(outBuf, outBufInfo.size, AudioTrack.WRITE_BLOCKING)
+                     decoder.releaseOutputBuffer(outBufIndex, false)
+@@ -1427,6 +1474,21 @@ a=sendrecv
+     }
+ 
+     val callStopped = AtomicBoolean(false)
++
++    // DTMF digits waiting to be sent as RFC 4733 telephone-event packets by callEncodeThread()
++    val dtmfQueue = java.util.concurrent.ConcurrentLinkedQueue<Int>()
++
++    fun sendDtmf(c: Char) {
++        val event = when (c) {
++            in '0'..'9' -> c - '0'
++            '*' -> 10
++            '#' -> 11
++            in 'A'..'D' -> 12 + (c - 'A')
++            else -> return
++        }
++        Rlog.d(TAG, "Queueing DTMF $c (event $event)")
++        dtmfQueue.add(event)
++    }
+     val callStarted = AtomicBoolean(false)
+     val updateReceived = AtomicBoolean(false)
+ 
+-- 
+2.55.0
+

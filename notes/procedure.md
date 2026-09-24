@@ -868,3 +868,18 @@ immediately instead of looping.
 
 Still open: incoming calls (untested), DTMF/keypad tones in calls, signal bars (FW_READY),
 outer-screen boot logo (needs a fix that doesn't touch device state), phone first-start ANR.
+
+### Calls: audio dropouts, DTMF, registration lapse — FIXED (2026-09-24 afternoon)
+- **Dropouts**: RTP arrives in bursts (~3 packets then ~45 ms gap) and Floss played into a
+  minBufferSize AudioTrack → underruns. Now ~200 ms buffer + 100 ms silence prefill; also
+  accepts all AMR-NB modes (was 12.2k only → silence when the network lowers the rate) and
+  passes the TOC Q bit. User: "sounds good".
+- **Keypad tones**: implemented RFC 4733 telephone-event (PT from SDP, 100) in the encode
+  thread; wired start/stop/sendDtmf on both call sessions. User confirmed on 13 19 03.
+- **Calls silently failing after ~1 h**: periodic re-REGISTER alarm never fired (implicit
+  broadcast vs RECEIVER_NOT_EXPORTED once not system uid) → registration expired at Telstra's
+  3599 s. Now explicit intent, every 30 min. TODO: verify after hours idle.
+
+Release notes (carrier portability): generic fixes = direct-200 handling, BYE, real P-ANI,
+audio/DTMF, re-register. Telstra-specific = no preconditions (should become: offer, retry
+without on 400/420/421), manual IMS APN + carrier_volte override (should be automatic).
