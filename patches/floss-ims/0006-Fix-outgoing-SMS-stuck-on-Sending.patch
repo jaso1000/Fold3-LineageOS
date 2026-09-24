@@ -1,0 +1,139 @@
+From 12855aacb637c6897bb499e1a4ba6c50522f0d98 Mon Sep 17 00:00:00 2001
+From: Jason Walker <59085866+jaso1000@users.noreply.github.com>
+Date: Thu, 24 Sep 2026 21:08:53 +1000
+Subject: [PATCH 6/6] Fix outgoing SMS stuck on Sending
+
+The framework passes the SIM SMSC as a hex SM-RP address (07 81 ...), which isn't a
+dialable number, so we fell through to getSmscIdentity (null on Telstra) and then crashed
+logging via Rlog.d(tag, msg, throwable), which no longer exists on A16. The exception was
+swallowed without resolving the token, leaving the message on Sending forever.
+
+Decode the hex SMSC, log throwables via android.util.Log, and always report an error on
+unexpected failures.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ app/src/main/java/me/phh/ims/PhhImsSms.kt  | 10 +++++++
+ app/src/main/java/me/phh/sip/SipHandler.kt | 31 ++++++++++++++--------
+ 2 files changed, 30 insertions(+), 11 deletions(-)
+
+diff --git a/app/src/main/java/me/phh/ims/PhhImsSms.kt b/app/src/main/java/me/phh/ims/PhhImsSms.kt
+index bc265f7..8bd1162 100644
+--- a/app/src/main/java/me/phh/ims/PhhImsSms.kt
++++ b/app/src/main/java/me/phh/ims/PhhImsSms.kt
+@@ -71,6 +71,16 @@ class PhhImsSms(val slotId: Int) : ImsSmsImplBase() {
+             )
+         } catch(t: Throwable) {
+             android.util.Log.e(TAG, "Failed sending sms", t)
++            // Always resolve the token, or the messaging app sits on "Sending" forever.
++            try {
++                onSendSmsResultError(
++                    token,
++                    messageRef,
++                    ImsSmsImplBase.SEND_STATUS_ERROR,
++                    SmsManager.RESULT_ERROR_GENERIC_FAILURE,
++                    RESULT_NO_NETWORK_ERROR
++                )
++            } catch (_: Throwable) {}
+         }
+     }
+     override fun acknowledgeSms(token: Int, messageRef: Int, result: Int) {
+diff --git a/app/src/main/java/me/phh/sip/SipHandler.kt b/app/src/main/java/me/phh/sip/SipHandler.kt
+index 0e7d69c..805126a 100644
+--- a/app/src/main/java/me/phh/sip/SipHandler.kt
++++ b/app/src/main/java/me/phh/sip/SipHandler.kt
+@@ -409,7 +409,7 @@ class SipHandler(val ctxt: Context) {
+                     parseMessage(socket.gReader(), socket.gWriter())
+                 }
+             } catch(t: Throwable) {
+-                Rlog.d(TAG, "Got exception in main/control socket", t)
++                android.util.Log.d(TAG, "Got exception in main/control socket", t)
+             }
+             socket.close()
+         }
+@@ -426,7 +426,7 @@ class SipHandler(val ctxt: Context) {
+                     client.close()
+                 }
+             } catch(t: Throwable) {
+-                Rlog.d(TAG, "Got exception in TCP server socket", t)
++                android.util.Log.d(TAG, "Got exception in TCP server socket", t)
+             }
+         }
+         CoroutineScope(Dispatchers.IO).launch {
+@@ -447,7 +447,7 @@ class SipHandler(val ctxt: Context) {
+                     writer.reset()
+                 }
+             } catch(t: Throwable) {
+-                Rlog.d(TAG, "Got exception in UDP server socket", t)
++                android.util.Log.d(TAG, "Got exception in UDP server socket", t)
+             }
+         }
+     }
+@@ -1864,14 +1864,14 @@ P-Access-Network-Info: ${accessNetworkInfo()}
+                 try {
+                     receivedCb(token, "3gpp", sms.pdu!!)
+                 } catch(t: Throwable) {
+-                    Rlog.d(TAG, "Failed sending SMS to framework", t);
++                    android.util.Log.d(TAG, "Failed sending SMS to framework", t);
+                 }
+             }
+             SmsType.RP_ACK_FROM_NETWORK -> {
+                 try {
+                     onSmsStatusReportReceived?.invoke(sms.ref.toInt(), "3gpp", ByteArray(2))
+                 } catch(t: Throwable) {
+-                    Rlog.d(TAG, "Failed sending SMS ACK to framework", t)
++                    android.util.Log.d(TAG, "Failed sending SMS ACK to framework", t)
+                 }
+             }
+             SmsType.RP_ERROR_FROM_NETWORK -> {
+@@ -1889,9 +1889,17 @@ P-Access-Network-Info: ${accessNetworkInfo()}
+         successCb: (() -> Unit),
+         failCb: (() -> Unit)
+     ) {
+-        val decodableSmsc = try {
+-            PhoneNumberUtils.numberToCalledPartyBCD(smsSmsc, PhoneNumberUtils.BCD_EXTENDED_TYPE_CALLED_PARTY); true
+-        } catch (t:Throwable) { false }
++        // The framework hands us the SIM's SMSC as a hex SM-RP address (e.g. "0791..."/"0781...":
++        // length, TON/NPI, swapped BCD) rather than a dialable number. Decode it to digits.
++        val hexSmsc = smsSmsc?.takeIf { it.length >= 4 && it.length % 2 == 0 && it.all { c -> c.isDigit() || c in "abcdefABCDEF" } }
++            ?.let { h ->
++                try {
++                    val b = ByteArray(h.length / 2) { i -> h.substring(i * 2, i * 2 + 2).toInt(16).toByte() }
++                    PhoneNumberUtils.calledPartyBCDToString(b, 1, b.size - 1, PhoneNumberUtils.BCD_EXTENDED_TYPE_CALLED_PARTY)
++                        ?.trimStart('+')?.takeIf { it.isNotEmpty() && it.all { c -> c.isDigit() } }
++                } catch (t: Throwable) { null }
++            }
++        val decodableSmsc = hexSmsc == null && smsSmsc != null && smsSmsc.trimStart('+').all { it.isDigit() } && smsSmsc.isNotEmpty()
+ 
+         val smsManager =
+             ctxt.getSystemService(SmsManager::class.java).createForSubscriptionId(subId)
+@@ -1904,7 +1912,8 @@ P-Access-Network-Info: ${accessNetworkInfo()}
+         Rlog.d(TAG, "Got smscIdentity $smscIdentity")
+         // make ref up?
+         val smsc =
+-            if (smsSmsc != null && decodableSmsc) smsSmsc
++            if (hexSmsc != null) hexSmsc
++            else if (smsSmsc != null && decodableSmsc) smsSmsc.trimStart('+')
+             else if (forceSmsc != null) forceSmsc
+             else {
+                 try {
+@@ -1912,14 +1921,14 @@ P-Access-Network-Info: ${accessNetworkInfo()}
+                     smscIdentity!!.host!!
+                 } catch(t: Throwable) {
+                     try {
+-                        Rlog.d(TAG, "getSmscIdentity failed", t)
++                        android.util.Log.d(TAG, "getSmscIdentity failed", t)
+                         val smscStr = smsManager.smscAddress
+                         val smscMatchRegex = Regex("([0-9]+)")
+                         Rlog.d(TAG, "Got smsc $smscStr, match ${smscMatchRegex.find(smscStr!!)}")
+                         val match = smscMatchRegex.find(smscStr!!)!!
+                         match.groupValues[1]
+                     } catch(t: Throwable) {
+-                        Rlog.d(TAG, "smscAddress failed", t)
++                        android.util.Log.d(TAG, "smscAddress failed", t)
+                         null
+                     }
+                 }
+-- 
+2.55.0
+

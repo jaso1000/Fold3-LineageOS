@@ -24,7 +24,7 @@ currently delivered via Magisk that must be baked in. See notes/procedure.md for
 ## Floss IMS for other carriers
 - [ ] Precondition fallback: offer QoS preconditions, retry without on 400/420/421 (Telstra rejects them)
 - [ ] Test on other carriers (Optus, Vodafone AU, overseas)
-- [ ] AMR-WB/EVS (HD voice), SMS over IMS; proper uplink gain instead of AGC
+- [ ] AMR-WB/EVS (HD voice), SMS delivery-report handling (RP-ACK currently fed as a dummy status report), MMS; proper uplink gain instead of AGC
 
 ## Cosmetic / later
 - [ ] Outer-screen boot logo — new approach that doesn't flip device state (the old one killed fingerprint)

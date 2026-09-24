@@ -129,6 +129,12 @@ BiTGApps Core doesn't pre-grant GSF: `pm grant com.google.android.gsf android.pe
   every tel URI; for a global `+CC` number that's invalid (RFC 3966) and Telstra silently drops
   the INVITE (no 100 Trying; hang-up gets 481). Global numbers now go as plain `tel:+61...`.
 
+- **SMS stuck on "Sending"** (patch 0006): the framework passes the SIM's SMSC as a hex SM-RP
+  address (`07 81 ...`), Telstra's ISIM has no SMSC SIP URI, and Floss's fallback crashed on
+  `Rlog.d(tag, msg, throwable)` (gone in A16) without resolving the send token. Now the hex SMSC
+  is decoded, throwables go through `android.util.Log`, and any failure reports "not sent".
+  Receiving already worked (incoming MESSAGE over IMS is injected into the GSM inbound handler).
+
 ### Fingerprint keeps losing its user — module `fold3-fingerprint-fix`
 - **Cause**: Samsung's HAL drops its active group after boot and after every **rild restart**
   (modem restart resets its secure-world session: `BAuth_SessionClose Fail`), then rejects

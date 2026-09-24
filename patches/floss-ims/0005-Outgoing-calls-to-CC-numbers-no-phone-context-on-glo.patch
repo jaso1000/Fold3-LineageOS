@@ -1,7 +1,7 @@
 From 8f9cf08aa159db72eddc3e73bb8c837ebe243154 Mon Sep 17 00:00:00 2001
 From: Jason Walker <59085866+jaso1000@users.noreply.github.com>
 Date: Thu, 24 Sep 2026 21:02:59 +1000
-Subject: [PATCH 5/5] Outgoing calls to +CC numbers: no phone-context on global
+Subject: [PATCH 5/6] Outgoing calls to +CC numbers: no phone-context on global
  tel URIs
 
 RFC 3966: a global number is a complete tel URI; Telstra silently dropped INVITEs to
