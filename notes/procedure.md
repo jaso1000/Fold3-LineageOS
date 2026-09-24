@@ -632,3 +632,43 @@ service bridging this, similar in spirit to `vendor.lineage.touch-service.samsun
 seen in the Fold5 device tree — that service exists for gesture/glove-mode features, not
 confirmed to handle this specific transition, but the same architectural pattern is worth
 investigating).
+
+## Outer touchscreen: FIXED (2026-09-24)
+
+### Root cause: the GSI tells Samsung's miscpower HAL "main display only", hard-coded
+
+Samsung's `vendor.samsung.hardware.miscpower@2.0-service` is what actually enables/disables
+the touch panels on screen on/off: it writes `/sys/class/sec/tsp{1,2}/input/enabled`
+(visible in dmesg as `!@sysfs_write +: ...`). Those writes go through
+`sec_input_enabled_store()` → the driver's `input_open`/`input_close`, which is the **only**
+path into full touch mode (`stm_ts_input_open()` → `lpmode(TO_TOUCH_MODE)`/`start_device()`).
+The HALL/fold chain traced earlier only ever reaches LP mode — that was a red herring.
+
+Disassembling the HAL service: its one method `setInteractiveAsync(bool on, int mode)` does
+- `mode 0` → enable tsp1 + S Pen, **disable tsp2**, `dualscreen_policy=0`
+- `mode 1` → enable tsp2, disable tsp1 + S Pen, `dualscreen_policy=1`
+- `mode -1` (or `on == false`) → every device follows `on`
+
+On stock One UI the framework passes the active display. The GSI's (phh/TrebleDroid-patched)
+`libpowermanager.so` passes a hard-coded `0` from **two** call sites:
+`AidlHalWrapper::setMode(INTERACTIVE)` @0x28810 (the one actually used — this device has an
+AIDL power HAL) and `HidlHalWrapperSeh::setInteractive` @0x298e0. Both are `mov w2, wzr`.
+
+Quick proof before patching: as root, `echo 1 > /sys/class/input/<sec_touchscreen2>/enabled`
+immediately gave `stm_ts_set_lowpowermode: EXIT` and live touch on the outer screen.
+
+Also: event numbers shift between boots — `sec_touchscreen2` was event14 this time, not
+event11. The earlier "zero events on event11" test may have been reading the inner panel.
+Check `/sys/class/input/input*/name` rather than assuming.
+
+### Fix: Magisk module `fold3-outer-touch`
+
+Patches both call sites to `mov w2, #-1`, so both panels are enabled on screen-on and both
+disabled on screen-off. Safe for input routing: when unfolded the outer viewport is
+`isActive=0` and InputReader ignores touches from it (and vice versa). Cost: the inactive
+panel's touch IC stays powered while the screen is on (small battery cost; could be refined
+later with a fold-aware helper).
+
+Build/install: `scripts/make-outer-touch-module.sh` (verifies the original lib's sha256 and
+the exact bytes before patching). **Confirmed working** by the user after reboot. If it ever
+bootloops: hold Volume Down during boot = Magisk safe mode (all modules disabled).

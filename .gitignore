@@ -4,3 +4,6 @@ build/
 *.img.lz4
 *.tar.md5
 *.zip
+
+# Built Magisk modules (contain patched GSI binaries; rebuild with scripts/)
+magisk/
