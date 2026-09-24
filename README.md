@@ -67,8 +67,7 @@ Don't `ctl.restart ril-daemon` to fix a slow phone start — it breaks the finge
 **Audio, camera & media**
 - ✅ Speakers / media playback, microphone, screen recording, volume keys
 - ✅ Rear main camera, inner (under-display) selfie, cover-screen selfie, flashlight
-- ✅ Ultra-wide and telephoto selectable in Aperture
-- ☐ Photos/video from each lens, video recording with sound
+- ✅ Ultra-wide and telephoto: photos from every lens, video recording with sound
 - ☐ Wired / USB-C headphones
 
 **Sensors & hardware**
