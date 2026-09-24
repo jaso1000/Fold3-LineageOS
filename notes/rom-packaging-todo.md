@@ -19,12 +19,12 @@ currently delivered via Magisk that must be baked in. See notes/procedure.md for
       (DeviceStateMonitor caches the failed boot-time send)
 - [ ] Phone/rild startup: phone process blocks in IRadio.getService during rild's slow init
       → "failed to complete startup" ANR loop. Consider more HwBinder threads / async RIL init.
-- [ ] Fingerprint: re-send setActiveGroup after the Samsung HAL restarts (HidlToAidl adapter)
+- [ ] Fingerprint: re-send setActiveGroup after HAL restart / rild restart (currently module fold3-fingerprint-fix)
 
 ## Floss IMS for other carriers
 - [ ] Precondition fallback: offer QoS preconditions, retry without on 400/420/421 (Telstra rejects them)
 - [ ] Test on other carriers (Optus, Vodafone AU, overseas)
-- [ ] Incoming calls (untested), AMR-WB/EVS (HD voice), SMS over IMS
+- [ ] AMR-WB/EVS (HD voice), SMS over IMS; confirm speakerphone audio in calls; proper uplink gain instead of AGC
 
 ## Cosmetic / later
 - [ ] Outer-screen boot logo — new approach that doesn't flip device state (the old one killed fingerprint)

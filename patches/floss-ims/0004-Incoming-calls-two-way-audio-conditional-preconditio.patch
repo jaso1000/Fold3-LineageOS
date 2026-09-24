@@ -1,0 +1,337 @@
+From 312043159ace1b13a416b606308ffdb53e429c46 Mon Sep 17 00:00:00 2001
+From: Jason Walker <59085866+jaso1000@users.noreply.github.com>
+Date: Thu, 24 Sep 2026 20:55:20 +1000
+Subject: [PATCH 4/4] Incoming calls + two-way audio: conditional
+ preconditions, caller ID, callee BYE, VoIP audio mode, RNNoise bypass + AGC
+
+- Incoming 183/200: only Require/offer QoS preconditions if the caller offered them
+  (Telstra CANCELs otherwise); send 180 Ringing after an early-media 183 is PRACKed
+- One local To-tag per incoming dialog (was random per response -> 481 on our BYE)
+- Callee-side BYE via commonHeaders (Via/Route/Security-Verify) to the INVITE Contact
+- Caller ID: set EXTRA_OIR/EXTRA_CNAP (missing OIR = presentation unknown = hidden)
+- Real P-Access-Network-Info in 183/180 (shared helper)
+- MmTelFeature.setCallAudioHandler(AUDIO_HANDLER_ANDROID) when each call is created, so
+  Telecom uses MODE_IN_COMMUNICATION instead of MODE_IN_CALL (Samsung HAL otherwise gives
+  the mic to the modem voice path)
+- Bypass RNNoise (48 kHz model fed 8 kHz audio -> outputs silence) and add a simple AGC
+  (capture level on this path is ~-50 dBFS); per-second uplink diagnostics
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .../main/java/me/phh/ims/PhhMmTelFeature.kt   |  34 +++++
+ app/src/main/java/me/phh/sip/SipHandler.kt    | 126 +++++++++++++++---
+ 2 files changed, 138 insertions(+), 22 deletions(-)
+
+diff --git a/app/src/main/java/me/phh/ims/PhhMmTelFeature.kt b/app/src/main/java/me/phh/ims/PhhMmTelFeature.kt
+index 1baf1cd..58d0e4a 100644
+--- a/app/src/main/java/me/phh/ims/PhhMmTelFeature.kt
++++ b/app/src/main/java/me/phh/ims/PhhMmTelFeature.kt
+@@ -65,9 +65,11 @@ class PhhMmTelFeature(val slotId: Int) : PhhMmTelFeatureProtected(slotId) {
+             override fun start(callee: String, profile: ImsCallProfile) {
+                 Rlog.d(TAG, "Starting call with $callee profile $profile")
+                 activeCallListener = mListener
++                setAudioHandlerAndroid()
+                 sipHandler.onCallConnected = {
+                     Rlog.d(TAG, "Outgoing call connected")
+                     mListener.callSessionInitiated(profile)
++                    setAudioHandlerAndroid()
+                 }
+                 sipHandler.call(callee)
+             }
+@@ -162,6 +164,14 @@ class PhhMmTelFeature(val slotId: Int) : PhhMmTelFeatureProtected(slotId) {
+ 
+             callProfile.setCallExtra(ImsCallProfile.EXTRA_OI, from)
+             callProfile.setCallExtra(ImsCallProfile.EXTRA_DISPLAY_TEXT, from)
++            // Without OIR telephony treats the presentation as unknown and the dialer hides the number
++            val withheld = from.isEmpty() || from.contains("anonymous", ignoreCase = true)
++            callProfile.setCallExtraInt(ImsCallProfile.EXTRA_OIR,
++                if (withheld) ImsCallProfile.OIR_PRESENTATION_RESTRICTED
++                else ImsCallProfile.OIR_PRESENTATION_NOT_RESTRICTED)
++            callProfile.setCallExtraInt(ImsCallProfile.EXTRA_CNAP,
++                if (withheld) ImsCallProfile.OIR_PRESENTATION_RESTRICTED
++                else ImsCallProfile.OIR_PRESENTATION_NOT_RESTRICTED)
+             notifyIncomingCall(object: ImsCallSessionImplBase() {
+                 var mState = State.IDLE
+                 override fun getCallProfile(): ImsCallProfile {
+@@ -201,6 +211,7 @@ class PhhMmTelFeature(val slotId: Int) : PhhMmTelFeatureProtected(slotId) {
+                     sipHandler.acceptCall()
+                     mState = State.ESTABLISHED
+                     callListener?.callSessionInitiated(callProfile)
++                    setAudioHandlerAndroid()
+                 }
+ 
+                 override fun deflect(deflectNumber: String?) {
+@@ -230,6 +241,8 @@ class PhhMmTelFeature(val slotId: Int) : PhhMmTelFeatureProtected(slotId) {
+                 }
+ 
+             }, Bundle())
++            // Mark it VoIP-audio before it's answered, so Telecom never enters MODE_IN_CALL
++            setAudioHandlerAndroid()
+         }
+         sipHandler.onCancelledCall = { param: Object, s: String, map: Map<String, String> ->
+             Rlog.d(TAG, "Cancelling call")
+@@ -249,10 +262,31 @@ class PhhMmTelFeature(val slotId: Int) : PhhMmTelFeatureProtected(slotId) {
+             }
+         }
+ 
++        setAudioHandlerAndroid()
+         imsService.getRegistration(slotId).onRegistering(REGISTRATION_TECH_LTE)
+         sipHandler.getVolteNetwork()
+     }
+ 
++    // Call audio is ours (RTP on the AP), not the modem's: with AUDIO_HANDLER_ANDROID telephony
++    // marks calls as VoIP audio mode, so Telecom uses MODE_IN_COMMUNICATION instead of
++    // MODE_IN_CALL. In MODE_IN_CALL Samsung's audio HAL routes the mic to the modem voice
++    // path (voicemmode1-call) and our AudioRecord hears nothing. Telephony applies this to the
++    // current call, so it's (re)sent whenever a call starts.
++    fun setAudioHandlerAndroid() {
++        // (Android 16 names it setCallAudioHandler; earlier previews used notifyAudioHandlerChanged)
++        val audioHandlerSet = listOf("setCallAudioHandler", "notifyAudioHandlerChanged").any { name ->
++            try {
++                android.telephony.ims.feature.MmTelFeature::class.java.getMethod(name, Int::class.javaPrimitiveType)
++                    .invoke(this, 0 /* MmTelFeature.AUDIO_HANDLER_ANDROID */)
++                Rlog.d(TAG, "Audio handler set to AUDIO_HANDLER_ANDROID via $name")
++                true
++            } catch (t: Throwable) {
++                false
++            }
++        }
++        if (!audioHandlerSet) Rlog.w(TAG, "Could not set audio handler")
++    }
++
+     override fun onFeatureRemoved() {
+         Rlog.d(TAG, "$slotId onFeatureRemoved")
+     }
+diff --git a/app/src/main/java/me/phh/sip/SipHandler.kt b/app/src/main/java/me/phh/sip/SipHandler.kt
+index 5aa6b57..1165a41 100644
+--- a/app/src/main/java/me/phh/sip/SipHandler.kt
++++ b/app/src/main/java/me/phh/sip/SipHandler.kt
+@@ -8,6 +8,7 @@ import android.net.*
+ import android.os.Handler
+ import android.os.HandlerThread
+ import android.telephony.CellInfoGsm
++import android.telephony.CellInfo
+ import android.telephony.CellInfoLte
+ import android.telephony.CellInfoNr
+ import android.telephony.CellInfoWcdma
+@@ -538,19 +539,26 @@ class SipHandler(val ctxt: Context) {
+         commonHeaders += newHeaders
+     }
+ 
++    // 3GPP TS 24.229 P-Access-Network-Info for the serving LTE cell:
++    // MCC + MNC + TAC (4 hex) + ECI (7 hex); falls back to a fixed value if there's no LTE cell.
++    @SuppressLint("MissingPermission")
++    fun accessNetworkInfo(cells: List<CellInfo>? = null): String {
++        val cellInfoList = cells ?: (ctxt.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager).getAllCellInfo()
++        val servingLte = cellInfoList.filterIsInstance<CellInfoLte>().firstOrNull { it.isRegistered }
++        return servingLte?.cellIdentity?.let { id ->
++            if (id.mccString != null && id.mncString != null && id.tac != Int.MAX_VALUE && id.ci != Int.MAX_VALUE)
++                "3GPP-E-UTRAN-FDD;utran-cell-id-3gpp=${id.mccString}${id.mncString}${"%04x".format(id.tac)}${"%07x".format(id.ci)}"
++            else null
++        } ?: "3GPP-E-UTRAN-FDD;utran-cell-id-3gpp=4500620f331a5e0a"
++    }
++
+     @SuppressLint("MissingPermission")
+     fun register(_writer: OutputStream? = null) {
+         val tm = ctxt.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
+ 
+         val cellInfoList = tm.getAllCellInfo()
+         // Some networks (e.g. Telstra) 403 the authenticated REGISTER without P-Access-Network-Info.
+-        // 3GPP TS 24.229 E-UTRAN form: MCC + MNC + TAC (4 hex) + ECI (7 hex).
+-        val servingLte = cellInfoList.filterIsInstance<CellInfoLte>().firstOrNull { it.isRegistered }
+-        val accessNetworkInfo = servingLte?.cellIdentity?.let { id ->
+-            if (id.mccString != null && id.mncString != null && id.tac != Int.MAX_VALUE && id.ci != Int.MAX_VALUE)
+-                "3GPP-E-UTRAN-FDD;utran-cell-id-3gpp=${id.mccString}${id.mncString}${"%04x".format(id.tac)}${"%07x".format(id.ci)}"
+-            else null
+-        } ?: "3GPP-E-UTRAN-FDD;utran-cell-id-3gpp=4500620f331a5e0a"
++        val accessNetworkInfo = accessNetworkInfo(cellInfoList)
+         for(cell in cellInfoList) {
+             if(cell is CellInfoLte) {
+                 val cellIdentity = cell.cellIdentity
+@@ -812,7 +820,8 @@ a=sendrecv
+         val rtpRemotePort: Int,
+         val rtpSocket: DatagramSocket,
+         val hasEarlyMedia: Boolean,
+-        val imsMediaSession: ImsMediaSession? = null
++        val imsMediaSession: ImsMediaSession? = null,
++        val remoteTarget: String? = null
+     )
+ 
+ 
+@@ -854,6 +863,7 @@ a=sendrecv
+             // DANGER: Don't open the mic before the user acknowledged opening the call!
+ 
+             val minBufferSize = AudioRecord.getMinBufferSize(8000, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)
++            // VOICE_COMMUNICATION gets the platform's echo cancellation / gain for calls.
+             val audioRecord = AudioRecord(MediaRecorder.AudioSource.VOICE_COMMUNICATION, 8000, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, minBufferSize)
+ 
+             audioRecord.startRecording()
+@@ -867,11 +877,47 @@ a=sendrecv
+             val bufferSize = ((minBufferSize + (rnnNoise.getFrameSize() - 1 )) / rnnNoise.getFrameSize()).toInt() * rnnNoise.getFrameSize()
+             val buffer = ByteArray(bufferSize)
+             val bufferPostRnnoise = ByteArray(bufferSize)
++            // Uplink diagnostics, logged once a second: mic level before/after rnnoise, reads, packets
++            fun rms(b: ByteArray, n: Int): Int {
++                var sum = 0.0
++                var i = 0
++                while (i + 1 < n) {
++                    val v = ((b[i + 1].toInt() shl 8) or (b[i].toInt() and 0xff)).toShort().toDouble()
++                    sum += v * v
++                    i += 2
++                }
++                return if (n > 1) Math.sqrt(sum / (n / 2)).toInt() else 0
++            }
++            var agcGain = 8.0
++            var diagReads = 0; var diagShort = 0; var diagRawRms = 0L; var diagPostRms = 0L
++            var diagLast = System.currentTimeMillis(); var diagSeqAtLast = sequenceNumber
++            Rlog.d(TAG, "Uplink: recording state=${audioRecord.recordingState} source=VOICE_COMMUNICATION rate=8000 buf=$bufferSize -> ${call.rtpRemoteAddr}:${call.rtpRemotePort} pt=${call.amrTrack}")
+             while (true) {
+                 if (callStopped.get()) break
+                 val nRead = audioRecord.read(buffer,0, buffer.size)
+-                // Convert buffer from ByteArray to ShortArray
+-                rnnNoise.processFrame(buffer, bufferPostRnnoise)
++                if (nRead <= 0) { diagShort++; Rlog.w(TAG, "Uplink: AudioRecord.read returned $nRead"); Thread.sleep(20); continue }
++                // RNNoise is a 48 kHz model; fed our 8 kHz audio it classifies speech as noise and
++                // outputs pure silence (measured: post-rnnoise rms 0 while talking). Bypass it.
++                // Capture level on this path is very low (speech ~60-110 rms of 32767), so apply a
++                // simple AGC: steer each chunk toward ~2500 rms, gain capped at 32x (+30 dB) so
++                // silence isn't pumped up into hiss, fast to back off / slow to rise, hard clip.
++                val chunkRms = rms(buffer, nRead)
++                val wanted = if (chunkRms > 8) minOf(32.0, 2500.0 / chunkRms) else agcGain
++                agcGain = if (wanted < agcGain) agcGain * 0.5 + wanted * 0.5 else agcGain * 0.9 + wanted * 0.1
++                var j = 0
++                while (j + 1 < nRead) {
++                    val v = ((buffer[j + 1].toInt() shl 8) or (buffer[j].toInt() and 0xff)).toShort()
++                    val g = (v * agcGain).toInt().coerceIn(-32768, 32767)
++                    bufferPostRnnoise[j] = (g and 0xff).toByte()
++                    bufferPostRnnoise[j + 1] = ((g shr 8) and 0xff).toByte()
++                    j += 2
++                }
++                diagReads++; diagRawRms += rms(buffer, nRead); diagPostRms += rms(bufferPostRnnoise, nRead)
++                val now = System.currentTimeMillis()
++                if (now - diagLast >= 1000) {
++                    Rlog.d(TAG, "Uplink: ${diagReads} reads, rms raw=${diagRawRms / maxOf(diagReads, 1)} after-agc=${diagPostRms / maxOf(diagReads, 1)} gain=${"%.1f".format(agcGain)}, bad reads=$diagShort, rtp sent=${sequenceNumber - diagSeqAtLast}")
++                    diagReads = 0; diagShort = 0; diagRawRms = 0; diagPostRms = 0; diagLast = now; diagSeqAtLast = sequenceNumber
++                }
+ 
+                 val inBufIdx = encoder.dequeueInputBuffer(-1)
+                 val inBuf = encoder.getInputBuffer(inBufIdx)!!
+@@ -1078,8 +1124,30 @@ a=sendrecv
+     }
+ 
+     fun terminateCall() {
+-        // IDK what packet do we send, but at least we're close rtp
+         currentCall?.imsMediaSession?.let { imsMediaManager.closeSession(it) }
++        // Hanging up an answered incoming call: we're the callee, so the BYE goes back to the
++        // caller with From/To swapped relative to the INVITE (our To carries our dialog tag).
++        val call = currentCall
++        if (call != null && !call.outgoing && callStarted.get() && !callStopped.get()) {
++            val from = call.callHeaders["from"]?.get(0)
++            val to = call.callHeaders["to"]?.get(0)
++            val callId = call.callHeaders["call-id"]
++            if (from != null && to != null && callId != null) {
++                // In-dialog request: goes to the caller's Contact, through the protected P-CSCF
++                // connection (commonHeaders carry our Via, Route and Security-Verify).
++                val target = call.remoteTarget ?: from.substringAfter("<").substringBefore(">")
++                thread {
++                    val msg = SipRequest(
++                        SipMethod.BYE,
++                        target,
++                        commonHeaders - "from" - "to" +
++                            ("call-id" to callId) + ("from" to listOf(to)) + ("to" to listOf(from))
++                    )
++                    Rlog.d(TAG, "Sending $msg")
++                    synchronized(socket.gWriter()) { socket.gWriter().write(msg.toByteArray()) }
++                }
++            }
++        }
+         callStopped.set(true)
+ 
+         onCancelledCall?.invoke(Object(), "", emptyMap())
+@@ -1569,6 +1637,20 @@ a=sendrecv
+         }
+ 
+         val hasEarlyMedia = request.headers["p-early-media"]?.isNotEmpty() == true
++        // Only answer with QoS preconditions if the caller offered them; demanding them otherwise
++        // makes the network CANCEL the call right after our 183 (Telstra does exactly that).
++        val callerPrecondition =
++            (request.headers["supported"].orEmpty() + request.headers["require"].orEmpty())
++                .any { it.contains("precondition") } ||
++            attributes.any { it.startsWith("curr:qos") || it.startsWith("des:qos") }
++        val preconditionSdp =
++            if (callerPrecondition) """
++a=curr:qos local none
++a=curr:qos remote none
++a=des:qos mandatory local sendrecv
++a=des:qos mandatory remote sendrecv
++a=conf:qos remote sendrecv""" else ""
++        val requireHeader = if (callerPrecondition) "100rel, precondition" else "100rel"
+ 
+         // Look for an AMR/8000 mode
+         // TODO: Select which one? SFR has two, one with mode-set=7 one without it. This would require reading the fmtp lines
+@@ -1598,6 +1680,7 @@ a=sendrecv
+             val contactTel =
+                 """<sip:$myTel@$local;transport=tcp>;expires=600000;+sip.instance="$sipInstance";+g.3gpp.icsi-ref="urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel";+g.3gpp.smsip;audio"""
+             val mySeqCounter = reliableSequenceCounter++
++            val localTag = randomBytes(6).toHex()
+             val ipType = if(socket.gLocalAddr() is Inet6Address) "IP6" else "IP4"
+             val mySdp = """
+ v=0
+@@ -1617,12 +1700,7 @@ a=ptime:20
+ a=maxptime:240
+ a=$dtmfTrackDesc
+ a=fmtp:$amrTrack mode-set=7;octet-align=0;max-red=0
+-a=fmtp:$dtmfTrack 0-15
+-a=curr:qos local none
+-a=curr:qos remote none
+-a=des:qos mandatory local sendrecv
+-a=des:qos mandatory remote sendrecv
+-a=conf:qos remote sendrecv
++a=fmtp:$dtmfTrack 0-15$preconditionSdp
+ a=sendrecv
+                        """.trim().toByteArray()
+ 
+@@ -1631,12 +1709,15 @@ a=sendrecv
+                         Contact: $contactTel
+                         Allow: INVITE, ACK, CANCEL, BYE, UPDATE, REFER, NOTIFY, INFO, MESSAGE, PRACK, OPTIONS
+                         Content-Type: application/sdp
+-                        Require: 100rel, precondition
++                        Require: $requireHeader
+                         RSeq: $mySeqCounter
+-                        P-Access-Network-Info: 3GPP-E-UTRAN-FDD;utran-cell-id-3gpp=20810b8c49752501
++                        P-Access-Network-Info: ${accessNetworkInfo()}
+                         """.toSipHeadersMap() +
+                             request.headers.filter { (k, _) -> k in listOf("cseq", "via", "from", "to", "call-id") } -
+-                "route" - "security-verify"
++                "route" - "security-verify" +
++                // One local tag for the whole dialog. Otherwise every response (183/180/200) gets
++                // its own random To-tag and our later BYE matches none of them (481).
++                ("to" to request.headers["to"]!!.map { if (it.contains(";tag=")) it else "$it;tag=$localTag" })
+ 
+             currentCall = Call(
+                 outgoing = false,
+@@ -1650,6 +1731,7 @@ a=sendrecv
+                 rtpSocket =  rtpSocket,
+                 sdp = mySdp,
+                 hasEarlyMedia = hasEarlyMedia,
++                remoteTarget = request.headers["contact"]?.get(0)?.let { extractDestinationFromContact(it) },
+             )
+ 
+             if(false) {
+@@ -1725,11 +1807,11 @@ a=sendrecv
+                 synchronized(socket.gWriter()) { socket.gWriter().write(msg.toByteArray()) }
+                 waitPrack(mySeqCounter)
+             }
+-            if (!hasEarlyMedia) {
++            run {
+                 val myHeaders2 = myHeaders - "rseq" - "content-type" - "require" +
+                     """
+ Supported: 100rel, replaces, timer
+-P-Access-Network-Info: 3GPP-E-UTRAN-FDD;utran-cell-id-3gpp=4500620f331a5e06
++P-Access-Network-Info: ${accessNetworkInfo()}
+ 
+ """.toSipHeadersMap()
+                 val msg2 =
+-- 
+2.55.0
+

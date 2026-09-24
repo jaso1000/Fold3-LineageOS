@@ -109,12 +109,36 @@ BiTGApps Core doesn't pre-grant GSF: `pm grant com.google.android.gsf android.pe
   Uninstall phh's release first (`pm uninstall me.phh.ims`).
 - ImsMedia is **not** needed (Floss's ImsMedia path is disabled upstream).
 
+### Incoming calls, two-way audio (Floss patch 0004)
+- **Incoming dropped instantly**: our 183 demanded `Require: precondition` (and QoS SDP lines)
+  though the caller didn't offer it → Telstra CANCELs. Now only if the INVITE offers it; send
+  180 Ringing after the early-media 183 is PRACKed.
+- **No caller ID**: missing `EXTRA_OIR` → presentation unknown; set OIR/CNAP.
+- **Hang-up ignored / 481**: each response got a random To-tag; now one local tag per dialog,
+  and the callee BYE uses commonHeaders (Via/Route/Security-Verify) to the INVITE Contact.
+- **Other side couldn't hear us** — three stacked causes, found with per-second uplink logging:
+  1. Telecom used `MODE_IN_CALL`, so Samsung's HAL started the modem voice path
+     (`voicemmode1-call`) and kept it even after a later mode change → call
+     `MmTelFeature.setCallAudioHandler(AUDIO_HANDLER_ANDROID)` (the A16 name of
+     notifyAudioHandlerChanged) **when each call is created** → `MODE_IN_COMMUNICATION`.
+     (In that mode the HAL uses its DSP `compress_voip` path, which works fine.)
+  2. RNNoise (48 kHz model) fed 8 kHz audio output pure silence → bypassed.
+  3. Capture level ~-50 dBFS → simple AGC (target ~2500 rms, max 32×). Confirmed clear.
+
+### Fingerprint keeps losing its user — module `fold3-fingerprint-fix`
+- **Cause**: Samsung's HAL drops its active group after boot and after every **rild restart**
+  (modem restart resets its secure-world session: `BAuth_SessionClose Fail`), then rejects
+  enroll/auth with `gid != m_active_group -1`; boot cleanup may then delete the enrolment.
+- **Fix**: `service.sh` runs a tiny dex (`tools/fp-active-group/FpActiveGroup.java`, via
+  `app_process` + services.jar's HIDL class) calling `setActiveGroup(0, /data/vendor_de/0/fpdata)`
+  ~30 s after boot and 20 s after any rild PID change. Also: stop manually restarting rild.
+
 ### Phone app / no network after boot (mitigated, manual)
 - **Cause**: at boot the phone process blocks in `IRadio.getService()` during rild's slow init;
   a Safety Center broadcast then ANRs → killed → rild restarts (its rc also restarts
   cpboot-daemon) → "failed to complete startup" ANR loop.
 - **Mitigation**: `pm disable com.android.phone/.security.SafetySourceReceiver`; now it recovers
-  after one ANR. If it ever loops: `setprop ctl.restart ril-daemon`.
+  after a few ANRs (~1 min). Avoid `setprop ctl.restart ril-daemon` — it breaks fingerprint.
 
 ### Hotspot "connected, no internet" — module `fold3-net-fixes`
 - **Cause**: DHCP gives clients the phone as DNS, but TetheringNext always starts netd with
