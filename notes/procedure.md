@@ -920,7 +920,7 @@ reported device state 0x0 (NORMAL): the GSI's `config_foldedDeviceStates` (and h
 are empty. RRO `overlays/Fold3FrameworkOverlay` sets folded=[0], halfFolded=[1,2], open=[3],
 `config_device_state_postures` and `config_display_features` (hinge fold-[884,0,884,2208], for
 Jetpack FoldingFeature / Flex mode). Build: aapt2 compile/link against device framework-res.apk.
-Status: installed + enabled; cover camera retest pending.
+Status: CONFIRMED — cover selfie camera works after reboot (user, 2026-09-24).
 
 ### Outer screen brightness — WORKING via helper (same module)
 DisplayManager's BacklightAdapter uses the single Lights HAL light (id 0), attached only to the
