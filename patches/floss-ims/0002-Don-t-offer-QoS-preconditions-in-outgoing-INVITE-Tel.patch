@@ -1,0 +1,38 @@
+From 7fae8a3c375dad837bebd7f6552c4c9974d4b746 Mon Sep 17 00:00:00 2001
+From: Jason Walker <59085866+jaso1000@users.noreply.github.com>
+Date: Thu, 24 Sep 2026 12:34:46 +1000
+Subject: [PATCH 2/2] Don't offer QoS preconditions in outgoing INVITE (Telstra
+ 400s them)
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ app/src/main/java/me/phh/sip/SipHandler.kt | 6 +-----
+ 1 file changed, 1 insertion(+), 5 deletions(-)
+
+diff --git a/app/src/main/java/me/phh/sip/SipHandler.kt b/app/src/main/java/me/phh/sip/SipHandler.kt
+index 28cf9b7..cc14064 100644
+--- a/app/src/main/java/me/phh/sip/SipHandler.kt
++++ b/app/src/main/java/me/phh/sip/SipHandler.kt
+@@ -1109,10 +1109,6 @@ a=rtpmap:$amrTrack AMR/8000/1
+ a=rtpmap:$dtmfTrack telephone-event/8000
+ a=fmtp:$amrTrack mode-change-capability=2;octet-align=0;max-red=0
+ a=fmtp:$dtmfTrack 0-15
+-a=curr:qos local none
+-a=curr:qos remote none
+-a=des:qos optional local sendrecv
+-a=des:qos optional remote sendrecv
+ a=sendrecv
+                        """.trim().toByteArray()
+ 
+@@ -1139,7 +1135,7 @@ a=sendrecv
+                     P-Early-Media: supported
+                     Content-Type: application/sdp
+                     Session-Expires: 900
+-                    Supported: 100rel, replaces, timer, precondition
++                    Supported: 100rel, replaces, timer
+                     Accept: application/sdp
+                     Min-SE: 90
+                     Accept-Contact: *;+g.3gpp.icsi-ref="urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel"
+-- 
+2.55.0
+

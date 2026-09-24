@@ -829,3 +829,31 @@ the old parse from `/data/system/package_cache` — `rm -rf /data/system/package
 Status: outgoing call to 101 connects, voicemail audio heard (downlink), hangup clean; uplink no
 longer silenced (pending user confirmation that voice reached the other side). Incoming calls
 untested. DTMF not implemented in this path.
+
+## Regressions found + fixed later on 2026-09-24
+
+### Fingerprint broken by the boot-splash module (module now DISABLED)
+`fold3-boot-splash` flips device state CLOSE→reset 2 s after boot. That kills Samsung's
+`vendor.fps_hal` (`HidlToAidlSensorAdapter: Fingerprint HAL died` exactly 2.0 s after
+boot-completed). Android reconnects but never re-sends `setActiveGroup`, so the new HAL rejects
+enrollment (`enroll gid != m_active_group -1`) and ignores the sensor. Worse: boot-time
+InternalCleanup then sees an empty enumerate and **deletes the framework's fingerprint record**
+(templates in /data/vendor/biometrics/fp survive, but are orphaned) → must re-enroll.
+Disabled with `touch /data/adb/modules/fold3-boot-splash/disable`; HAL deaths now 0.
+TODO: new logo fix that doesn't touch device state (e.g. blank panel1 directly), or re-run
+setActiveGroup after the flip.
+
+### Phone process / rild boot loop ("no network", dialer crash "telephony service is null")
+Pre-existing (32 phone ANRs seen before any changes). Chain: at boot phone's main thread is busy
+waiting on rild → `REFRESH_SAFETY_SOURCES` broadcast to `SafetySourceReceiver` ANRs → phone
+killed → rild restarts (its rc also restarts cpboot-daemon) → new phone's
+`PhoneFactory.makeDefaultPhones → IRadio.getService()` waits on rild's slow modem init → "failed
+to complete startup" ANR after 10 s → killed again → loop, sometimes minutes. `ctl.restart
+ril-daemon` breaks it. Mitigation: `pm disable com.android.phone/.security.SafetySourceReceiver`
+(only feeds Safety Center's cellular-security card). Needs verification over several boots.
+(Earlier "rild crashed on 183" was my own ctl.restart coinciding with a call — not a real crash.)
+
+### Outgoing calls to normal numbers: 400 "Unexpected precondition lines"
+Telstra accepts precondition SDP for 101 but 400s it for regular numbers. Floss patch now omits
+`a=curr/des:qos` lines and doesn't advertise `precondition` (Telstra never uses it). Call to
+13 19 03 then reached `183 Session Progress` (ringing) before the test was cut short.
