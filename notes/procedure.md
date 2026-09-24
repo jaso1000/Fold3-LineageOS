@@ -712,3 +712,9 @@ Not portable (they build Qualcomm's open-source kalama audio HAL instead of Sams
 needs for **calls**: `g_call_state` (2 active / 1 inactive), `g_call_sim_slot` (0x01/0x02)
 and `vsid=...;call_state=...` parameters that One UI normally sends. Relevant later for
 in-call audio once IMS/calls are sorted.
+
+**Bonus (user-confirmed, same session): fingerprint now works too** — enrolled and unlocking
+(`dumpsys fingerprint`: accept=1, HAL deaths 0). Not targeted directly; most likely Samsung's
+fingerprint HAL depended on the same storage/user-unlock completion that the codec hang was
+blocking. So the earlier "fingerprint only works on Android-14 GSIs" pattern was probably this
+bug, not an Android-version limit.

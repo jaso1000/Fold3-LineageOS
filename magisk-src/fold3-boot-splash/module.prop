@@ -1,0 +1,6 @@
+id=fold3-boot-splash
+name=Fold3 outer-screen boot logo fix
+version=v1
+versionCode=1
+author=jason
+description=If booted unfolded, briefly flip device state to CLOSE and back so the outer panel leaves the bootloader splash (otherwise the Samsung logo stays until the first fold).

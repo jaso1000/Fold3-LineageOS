@@ -6,7 +6,11 @@ which is done and working.
 
 Device: Samsung Galaxy Z Fold3, SM-F926B (Australian variant), codename **q2q**, Snapdragon 888 (SM8350).
 
-## Status: Android 16 booting with working Play Store (paused 2026-09-24)
+## Status: Android 16 daily-driver candidate (2026-09-24)
+
+**Update 2026-09-24 (later session):** outer touchscreen, storage (`/sdcard`), media playback/speaker audio and fingerprint all FIXED via three small Magisk modules built by `scripts/` — see the last sections of [notes/procedure.md](notes/procedure.md). Still open: calls/IMS, outer-screen boot logo fix awaiting test (`magisk-src/fold3-boot-splash`), Google sign-in not yet re-tested end to end.
+
+### Earlier status (kept for history)
 
 **Where things actually stand right now**, for picking this back up later:
 - Bootloader **unlocked**, Knox tripped, device fully healthy and usable.
