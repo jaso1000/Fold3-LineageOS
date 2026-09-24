@@ -672,3 +672,43 @@ later with a fold-aware helper).
 Build/install: `scripts/make-outer-touch-module.sh` (verifies the original lib's sha256 and
 the exact bytes before patching). **Confirmed working** by the user after reboot. If it ever
 bootloops: hold Volume Down during boot = Magisk safe mode (all modules disabled).
+
+## Storage + media + "audio": FIXED — one root cause (2026-09-24)
+
+Symptoms that all turned out to be the same bug: `/sdcard` missing (`emulated;0 unmounted`,
+apps given `/dev/null/Android/data/...`), no media playback anywhere (YouTube, music, the
+recorder app crashing), "no audio from speakers", Google sign-in failing ("Checking info" →
+"Something went wrong"). The speakers/amp/audio HAL were fine all along.
+
+### Chain, traced live
+1. `dumpsys mount` → `CE unlocked users: [0]` but `System unlocked users: []`; the boot log
+   never shows `StorageManagerService: Thinking about reset, mBootCompleted=true`.
+2. `kill -3 <system_server>` → the `StorageManagerService` handler thread is stuck in
+   `handleSystemReady → configureTranscoding → isHevcDecoderSupported → new MediaCodecList
+   → media.player getCodecList` (binder call that never returns). Everything later on that
+   handler (boot-completed reset → vold mount, user unlock bookkeeping) never runs.
+3. `debuggerd -b <mediaserver32>` → blocked in `Codec2Client::ListComponents →
+   getService<IComponentStore>`, waiting on an instance that never registers.
+4. Vendor manifest `/vendor/etc/vintf/manifest/sec_c2_manifest_default0.xml` declares
+   `IComponentStore/default0`, provided by Samsung's `samsung.software.media.c2@1.0-service`.
+   That service dies on every start with SIGSYS; logcat:
+   `libminijail: blocked syscall: mremap`. Its vendor seccomp policy only allows
+   `mremap: arg3 == 3`; the A16 GSI's allocator calls it with `MREMAP_MAYMOVE` alone.
+
+### Fix: Magisk module `fold3-media-c2-seccomp`
+Overlays `/vendor/etc/seccomp_policy/samsung.software.media.c2-base-policy` with that one
+line widened to `mremap: arg3 == 3 || arg3 == MREMAP_MAYMOVE` (identical to AOSP's own
+`mediacodec.policy`). Built by `scripts/make-media-c2-seccomp-module.sh`. After reboot:
+service running, `emulated;0 mounted`, `System unlocked users: [0]`, `/sdcard` populated,
+test tone routed `deep-buffer-playback → dual-speaker`, **user confirmed audio working**.
+
+Side note, also done this session: Google Services Framework had `GET_ACCOUNTS`,
+`READ_CONTACTS`, `WRITE_CONTACTS`, `READ_PHONE_STATE` denied (BiTGApps Core doesn't
+pre-grant them) — granted via `pm grant com.google.android.gsf ...`.
+
+### Fold5 (Exynoobs q5q/sm8550-common) research notes
+Not portable (they build Qualcomm's open-source kalama audio HAL instead of Samsung's
+`audio.sec_primary`), but their `audio/impl/PrimaryDevice.cpp` shows what Samsung's HAL
+needs for **calls**: `g_call_state` (2 active / 1 inactive), `g_call_sim_slot` (0x01/0x02)
+and `vsid=...;call_state=...` parameters that One UI normally sends. Relevant later for
+in-call audio once IMS/calls are sorted.
