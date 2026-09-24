@@ -83,7 +83,7 @@ Recovery if a module ever breaks boot: hold **Volume Down** during boot = Magisk
 > ⚠️ **Read first.** Unlocking the bootloader **wipes the phone** and **trips Knox permanently**
 > (Samsung Pay/Wallet, Secure Folder, Samsung Health and some banking apps stop working, and
 > it can't be undone). This is a working personal build, not a polished ROM — you can end up
-> without a working phone. Only tested on **SM-F926B** (Exynos-free global/AU Snapdragon model)
+> without a working phone. Only tested on the **SM-F926B** (global/Australian model)
 > on firmware `F926BXXSJJZH3`, with Telstra/Boost for calls.
 
 **Tools**
