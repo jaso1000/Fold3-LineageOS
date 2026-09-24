@@ -1,7 +1,27 @@
-# TODO when packaging a real ROM (patched GSI or device tree build)
+# ROM build plan and TODO
 
 Things deliberately deferred because they need source/framework changes, plus everything
-currently delivered via Magisk that must be baked in. See notes/procedure.md for details.
+currently delivered via Magisk that must be baked in. See notes/procedure.md for root causes.
+
+## Plan (decided 2026-09-24)
+- **Route**: build the LineageOS 23.2 TrebleDroid GSI **from source** (MisterZtr/LineageOS_gsi
+  manifest + TrebleDroid patches) with our changes as extra patches. A device-tree build (like the
+  Fold5 Exynoobs ROM) and official LineageOS status come later, if ever.
+- **Target firmware**: F926BXXSJJZH3 is Samsung's **final** Fold3 firmware (Aug 2026 patch;
+  support ended Sep 2026). Vendor, kernel and bootloader stay frozen there; users flash it first.
+- **Machine**: Windows desktop, WSL2 Ubuntu 24.04. Source inside the Linux filesystem (not
+  `/mnt/c`), about 400 GB free on NVMe, `.wslconfig` memory 32–48 GB, most cores, swap 32 GB. Exclude
+  the WSL disk from Defender. Attach the phone to WSL with usbipd-win (Odin stays on Windows).
+  Run Claude Code inside Ubuntu with this repo cloned there.
+- **Identity**: unofficial build name, own release keys (kept out of the repo, backed up), vanilla
+  (GApps flashed separately), releases on this repo's GitHub Releases (kept for the ROM).
+- **Milestones**
+  1. Reproduce the current GSI from source, unchanged; it must boot identically.
+  2. Bake in everything under "Must bake in" (no Magisk needed).
+  3. Framework fixes below (signal bars first; they're proven).
+  4. Clean-install test on the phone, then release notes, XDA thread, licence notes (Floss GPLv2).
+- **Before building**: finish the open README checklist items (reboots, idle calls, battery,
+  Android Auto, NFC, headphones) so problems are attributed correctly.
 
 ## Must bake in (currently Magisk modules / manual steps)
 - [ ] libpowermanager miscpower mode -1 (outer touch) — source fix in phh's frameworks/native patch
@@ -21,7 +41,10 @@ currently delivered via Magisk that must be baked in. See notes/procedure.md for
       (DeviceStateMonitor caches the failed boot-time send)
 - [ ] Phone/rild startup: phone process blocks in IRadio.getService during rild's slow init
       → "failed to complete startup" ANR loop. Consider more HwBinder threads / async RIL init.
-- [ ] Fingerprint: re-send setActiveGroup after HAL restart / rild restart (currently module fold3-fingerprint-fix)
+- [ ] Fingerprint: send setActiveGroup before the boot-time InternalCleanupClient enumerate and
+      after every HAL/rild restart (currently module fold3-fingerprint-fix, which can still lose
+      the race: if the HAL dies at boot, the framework re-enumerates ~1.4 s later and drops the
+      enrollment). Fix it in the HIDL fingerprint provider (HidlToAidlSessionAdapter).
 
 ## Floss IMS for other carriers
 - [ ] Precondition fallback: offer QoS preconditions, retry without on 400/420/421 (Telstra rejects them)

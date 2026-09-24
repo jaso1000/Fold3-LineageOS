@@ -11,7 +11,7 @@ Running on Samsung's **final** Fold3 firmware, F926BXXSJJZH3 (August 2026 patch)
 all updates for the Fold3 in September 2026.
 
 LineageOS 23.2 (Android 16) TrebleDroid GSI + BiTGApps Core, rooted with Magisk, on the stock
-Samsung A15 vendor (`F926BXXSJJZH3`). Nearly everything works, including **VoLTE calls on
+Samsung Android 15 vendor (`F926BXXSJJZH3`). Nearly everything works, including **VoLTE calls on
 Telstra/Boost** and both screens. Fixes are delivered as small Magisk modules (ready-made zips in
 [`prebuilt/`](prebuilt/), sources in `magisk-src/` and `scripts/`, the patched VoLTE app in
 [`floss-ims/`](floss-ims/)); the root-cause writeups are in
@@ -26,7 +26,7 @@ Telstra/Boost** and both screens. Fixes are delivered as small Magisk modules (r
 | Outer touchscreen dead | GSI calls Samsung miscpower HAL with hard-coded "main display" mode | Patch 2 instructions in `libpowermanager.so` (mode -1) | module `fold3-outer-touch` (`scripts/make-outer-touch-module.sh`) |
 | No `/sdcard`, no media/"speakers", Google sign-in fails, fingerprint gone | Samsung Codec2 HAL killed by its seccomp policy (`mremap`), hanging MediaCodecList and StorageManagerService | Widen that one seccomp rule | module `fold3-media-c2-seccomp` (`scripts/make-media-c2-seccomp-module.sh`) |
 | Google sign-in "Checking info" | GSF missing runtime permissions (BiTGApps Core) | `pm grant` GSF permissions | manual (TODO: default-permissions XML) |
-| No calls (Telstra has no 3G) | No IMS stack usable with Samsung's vendor | phh's Floss IMS, **patched**: direct-200/early-media handling, conditional preconditions, RFC 3966 `+CC` numbers, SMS SMSC decoding, BYE both directions, caller ID, real P-ANI, VoIP audio mode, RNNoise bypass + AGC, jitter buffer, all AMR modes, DTMF, re-register alarm, priv-app permissions | module `fold3-floss-ims` (`patches/floss-ims/`, `scripts/make-floss-module.sh`) + IMS APN + `carrier_volte_available` override |
+| No calls (Telstra has no 3G) | No IMS stack usable with Samsung's vendor | phh's Floss IMS, **patched**: direct-200/early-media handling, conditional preconditions, RFC 3966 `+CC` numbers, SMS SMSC decoding, BYE both directions, caller ID, real P-ANI, VoIP audio mode, RNNoise bypass + AGC, jitter buffer, all AMR modes, DTMF, re-register alarm, priv-app permissions | module `fold3-floss-ims` (source `floss-ims/`, changes in `patches/floss-ims/`, `scripts/make-floss-module.sh`) + IMS APN + `carrier_volte_available` override |
 | Phone app / no network after boot (ANR loop) | Phone blocks on slow rild init at startup | Disabled `com.android.phone/.security.SafetySourceReceiver`; recovers on its own now | manual `pm disable` (root cause still open) |
 | Hotspot "connected, no internet" | Tethering never starts a DNS proxy; clients' DNS goes nowhere | DNAT hotspot DNS to 8.8.8.8 | module `fold3-net-fixes` |
 | Cover-screen selfie camera shows the inner camera; no Flex mode in apps | GSI has no folded/open device-state config, so camera HAL never told "folded" | Framework RRO with fold states, postures and hinge feature (`config_display_features` is a plain string, not an array) | module `fold3-fold-config` (`overlays/Fold3FrameworkOverlay`) |
@@ -67,7 +67,7 @@ Don't `ctl.restart ril-daemon` to fix a slow phone start — it breaks the finge
 - ✅ Half-fold doesn't glitch
 - ⚠️ Adaptive refresh doesn't ramp up to 120 Hz on its own — workaround: Settings → Display → **Minimum refresh rate = 120 Hz** (smooth, costs some battery)
 - ✅ Flex mode in apps (YouTube half-folded)
-- ⚠️ Samsung logo stays on the outer screen after an unfolded boot until the first fold
+- ⚠️ Samsung logo stays on the outer screen after boot (folded or unfolded) until the first fold/unfold. The cause is known (the bootloader leaves the idle panel lit); the fix is in the ROM build. Fold once after booting, because the static logo causes OLED image retention.
 
 **Audio, camera & media**
 - ✅ Speakers / media playback, microphone, screen recording, volume keys
@@ -76,16 +76,27 @@ Don't `ctl.restart ril-daemon` to fix a slow phone start — it breaks the finge
 - ☐ Wired / USB-C headphones
 
 **Sensors & hardware**
-- ✅ Fingerprint (survives reboot), haptics, proximity sensor, wireless charging
+- ✅ Fingerprint (survives reboot; rarely the enrollment can still drop at boot if the HAL crashes, see procedure.md), haptics, proximity sensor, wireless charging
 - ☐ S Pen, reverse wireless charging, fast charging speed
 
 **System**
 - ✅ Storage, Play Store / Google services, root
 - ✅ Google sign-in, Play Store installs (Messages, YouTube)
 - ✅ Play Integrity: BASIC (with PlayIntegrityFork); DEVICE/STRONG not expected with an unlocked bootloader
-- ☐ Several reboots in a row: network up within ~1 min each time
+- ☐ Several reboots in a row: network up within ~1 min, fingerprint still enrolled
+- ☐ Android Auto (installed, not yet tried in the car)
 - ☐ Overnight battery drain
 - ⚠️ Banking apps / Wallet tap-to-pay: not used on this phone. Many banks' terms forbid modified or rooted OSes, and an unlocked bootloader only gets BASIC integrity. Keep banking on a stock, updated phone.
+
+## Next: a real ROM build
+
+The Magisk-module setup is feature-complete for daily use. What's left needs Android's own code
+changed, so the next step is building the ROM from source: **LineageOS 23.2 TrebleDroid GSI source
++ this repo's fixes baked in**, on a Windows desktop under WSL2. It will fix signal bars, the
+outer-screen boot logo, the fingerprint boot race, the phone app's slow start and adaptive 120 Hz,
+add a built-in Play Integrity spoof (RCS without root), and need no root. The plan, milestones and
+full to-do list are in [notes/rom-packaging-todo.md](notes/rom-packaging-todo.md). Releases will go to
+this repo's GitHub Releases.
 
 ## Installing it yourself
 
@@ -162,7 +173,9 @@ replaces `/vendor/etc/devicestate/device_state_configuration.xml` with Samsung's
   prebuilt zips in `prebuilt/`; Floss IMS source in `floss-ims/` (GPLv2, phh), our changes vs
   upstream `phhusson/ims@c180bdf` as patches in `patches/floss-ims/`; overlay source in `overlays/`.
 - Floss build SDK: `build/src/floss-sdk` (android-33 platform with MmTelFeature stripped, build-tools 34).
-- Laptop: Surface, Arch Linux (Omarchy).
+- Prototypes kept for the ROM build: `tools/seh-signal/` (signal bars via Samsung ISehRadio),
+  `tools/fp-active-group/` (fingerprint setActiveGroup).
+- Laptop: Surface, Arch Linux (Omarchy). ROM build machine: Windows desktop with WSL2 (planned).
 
 ## References
 
