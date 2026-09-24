@@ -898,3 +898,39 @@ without on 400/420/421), manual IMS APN + carrier_volte override (should be auto
   CellSignalStrength. NOT doable as an overlay on this GSI: `telephony-common.jar` is in the
   **boot image** (boot-telephony-common.oat/art/vdex) → replacing it breaks the boot image
   (bootloop risk). Interim alternative if ever wanted: LSPosed runtime hook in com.android.phone.
+
+## Checklist round (2026-09-24 evening): hotspot, cover camera, outer brightness, location
+
+User test results: Wi-Fi, BT (headphones + controller), airplane, rotation (both screens), screen
+on/off + lock (both), half-fold, mic, screen record, volume keys, rear + inner selfie cameras,
+flashlight, haptics, proximity, wireless charging — all OK.
+
+### Hotspot "connected, no internet" — FIXED (module `fold3-net-fixes`)
+Not offload, not IPv6: DHCP gives clients the phone as DNS server, but TetheringNext always calls
+`tetherStartWithConfiguration(usingLegacyDnsProxy=false)` so netd never starts dnsmasq and
+nothing listens on :53 (queries seen arriving via an INPUT counter; FORWARD counter stayed 0).
+There's no flag to turn the legacy proxy back on in this module version. Fix: boot script DNATs
+udp/tcp 53 arriving on swlan0 to 8.8.8.8 (idempotent `iptables -C` check). Confirmed working.
+ROM TODO: proper tethering DNS (or use the upstream carrier DNS instead of a public resolver).
+
+### Cover-screen selfie camera shows the inner camera — fold config RRO (module `fold3-fold-config`)
+Camera ids: 0 back 12MP, 1 front 10MP, 2 back 12MP, 3 front (UDC), 4 SECURE_IMAGE_DATA (face).
+App opens id 1 folded, but Samsung's HAL mapped it to chiCameraId 8 (UDC) because CameraService
+reported device state 0x0 (NORMAL): the GSI's `config_foldedDeviceStates` (and half/open/rear)
+are empty. RRO `overlays/Fold3FrameworkOverlay` sets folded=[0], halfFolded=[1,2], open=[3],
+`config_device_state_postures` and `config_display_features` (hinge fold-[884,0,884,2208], for
+Jetpack FoldingFeature / Flex mode). Build: aapt2 compile/link against device framework-res.apk.
+Status: installed + enabled; cover camera retest pending.
+
+### Outer screen brightness — WORKING via helper (same module)
+DisplayManager's BacklightAdapter uses the single Lights HAL light (id 0), attached only to the
+first (inner) display; outer display had `backlight=null`. Added
+`/product/etc/displayconfig/display_id_4630947232161729155.xml` with quirk
+`canSetBrightnessViaHwc` (forces SurfaceControl path) but Samsung HWC ignores it. The panel's
+sysfs `/sys/class/backlight/panel1-backlight` (0..510) works, so `service.sh` mirrors the default
+display's brightness onto it while the outer panel is the lit one: sysfs = float*510 (measured on
+inner: 0.1→52, 0.5→256, 1.0→510). Live slider: SystemUI only sets a temporary brightness while
+dragging → read `mTemporaryScreenBrightness` from `dumpsys display` (≈40 ms), poll 0.3 s, only
+while outer is active. ROM TODO: do this properly in the framework / a lights HAL with two lights.
+
+### Location — works (GPS fix with ~37 m hAcc); Maps-in-browser issue was site permissions.

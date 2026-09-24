@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Fold3 outer (cover) panel, physical id local:4630947232161729155 (port 131).
+     The Lights HAL only has one backlight, wired to the first (inner) display, so the outer
+     display had no brightness path at all. Drive it through HWC/SurfaceControl instead. -->
+<displayConfiguration>
+    <quirks>
+        <quirk>canSetBrightnessViaHwc</quirk>
+    </quirks>
+</displayConfiguration>

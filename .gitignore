@@ -9,3 +9,6 @@ build/
 magisk/
 # Built by scripts/make-floss-module.sh
 magisk-src/fold3-floss-ims/system/priv-app/
+# Built overlay APKs (rebuild from overlays/)
+magisk-src/fold3-fold-config/system/product/overlay/*.apk
+overlays/*/build/

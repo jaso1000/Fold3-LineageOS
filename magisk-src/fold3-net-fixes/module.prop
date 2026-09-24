@@ -1,0 +1,6 @@
+id=fold3-net-fixes
+name=Fold3 network fixes (hotspot DNS)
+version=v1
+versionCode=1
+author=jason
+description=Hotspot clients get the phone as DNS server, but this tethering module never starts a DNS proxy (usingLegacyDnsProxy is always false) -> "connected, no internet". DNAT their DNS to a public resolver.

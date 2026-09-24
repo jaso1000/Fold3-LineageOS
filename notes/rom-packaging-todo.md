@@ -28,3 +28,8 @@ currently delivered via Magisk that must be baked in. See notes/procedure.md for
 
 ## Cosmetic / later
 - [ ] Outer-screen boot logo — new approach that doesn't flip device state (the old one killed fingerprint)
+
+## Added 2026-09-24 evening
+- [ ] Hotspot DNS: TetheringNext never starts a DNS proxy → currently DNAT to 8.8.8.8 (module fold3-net-fixes)
+- [ ] Fold device-state config (foldedDeviceStates/postures/display_features) — RRO overlays/Fold3FrameworkOverlay
+- [ ] Outer display brightness: lights HAL/framework path for the second panel (currently a polling helper writing panel1-backlight)

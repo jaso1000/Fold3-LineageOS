@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Fold3 (q2q) fold configuration for the GSI. Device state ids come from Samsung's
+     /vendor/etc/devicestate/device_state_configuration.xml:
+     0 CLOSE, 1 TENT, 2 HALF_FOLDED, 3 OPEN, 4 DUAL, 5 REAR_DUAL -->
+<resources>
+    <!-- CameraService reports FOLDED to the camera HAL for these; Samsung's HAL then routes the
+         front camera id to the cover sensor instead of the inner under-display one. -->
+    <integer-array name="config_foldedDeviceStates">
+        <item>0</item>
+    </integer-array>
+    <integer-array name="config_halfFoldedDeviceStates">
+        <item>1</item>
+        <item>2</item>
+    </integer-array>
+    <integer-array name="config_openDeviceStates">
+        <item>3</item>
+    </integer-array>
+
+    <!-- Jetpack WindowManager FoldingFeature (Flex mode in apps): state:posture,
+         posture 1 = closed, 2 = half opened, 3 = opened -->
+    <string-array name="config_device_state_postures">
+        <item>0:1</item>
+        <item>1:2</item>
+        <item>2:2</item>
+        <item>3:3</item>
+    </string-array>
+    <!-- Hinge on the inner 1768x2208 panel, vertical at the middle -->
+    <string-array name="config_display_features">
+        <item>fold-[884,0,884,2208]</item>
+    </string-array>
+</resources>
