@@ -234,7 +234,17 @@ then deletes the enrolled fingerprint. Kept in `magisk-src/`, disabled on the ph
   answered. The first boot version didn't start the hwbinder thread pool, so rild hung. The fix
   belongs in the ROM: in the GSI's `signalLevelInfoChanged` handler (RadioNetworkProxy), build an
   LTE/NR SignalStrength from the bar level and feed it to SignalStrengthController.
-- **Outer-screen boot logo** stays until the first fold (needs a fix that doesn't change device state).
+- **Outer-screen boot logo** stays until the first fold (also on a folded boot). Cause (2026-09-24):
+  the bootloader lights both panels; Android never powers the inactive one on, so it never sends it a
+  display-off. The kernel shows the connector as `enabled=disabled` but `dpms=On`
+  (`/sys/class/drm/card0-DSI-2`), and the panel keeps its last frame. Setting
+  `panel1-backlight/brightness` to 0 does **not** hide it. `SurfaceControl.getPhysicalDisplayToken`
+  moved to services.jar `DisplayControl` (natives only load inside system_server), so an external
+  SurfaceFlinger power-cycle isn't practical. Untested lead: `cmd display power-off <id>` /
+  `power-reset <id>` on the disabled logical display (unfolded: outer = display 2). ROM fix: power
+  the inactive panel off once at boot (DisplayManager/DisplayPowerController), without touching
+  device state (the old device-state override killed the fingerprint HAL). Keep test reboots to a
+  minimum: the static logo causes OLED image retention.
 - **Phone first-start ANR** still happens once per boot (recovers).
 - **Refresh rate**: adaptive mode didn't seem to reach 120 Hz when interacting. Workaround in use:
   Settings → Display → Minimum refresh rate → 120 Hz (always 120 Hz; more battery). Not
