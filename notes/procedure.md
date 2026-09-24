@@ -857,3 +857,14 @@ ril-daemon` breaks it. Mitigation: `pm disable com.android.phone/.security.Safet
 Telstra accepts precondition SDP for 101 but 400s it for regular numbers. Floss patch now omits
 `a=curr/des:qos` lines and doesn't advertise `precondition` (Telstra never uses it). Call to
 13 19 03 then reached `183 Session Progress` (ringing) before the test was cut short.
+
+### ✅ Outgoing VoLTE calls confirmed working (2026-09-24 12:39)
+After the precondition fix + SafetySourceReceiver mitigation + boot-splash disabled:
+13 19 03: INVITE → 100 → 183 → 200 → RTP → UI connected → BYE/200 (clean). 101 likewise.
+Three calls back-to-back, 1888 RTP packets received, mic not silenced, no phone ANRs during calls.
+User: "seems to be working now". Fingerprint also persisted across a reboot (count 1, HAL deaths 0).
+Boot: one phone "failed to complete startup" ANR still happens on first start, but recovers
+immediately instead of looping.
+
+Still open: incoming calls (untested), DTMF/keypad tones in calls, signal bars (FW_READY),
+outer-screen boot logo (needs a fix that doesn't touch device state), phone first-start ANR.
