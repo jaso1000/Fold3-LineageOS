@@ -221,9 +221,19 @@ then deletes the enrolled fingerprint. Kept in `magisk-src/`, disabled on the ph
 
 ## Known issues
 
-- **Signal bars 0**: Samsung rild returns an all-invalid SignalStrength and never sends signal
-  indications (though `UNSOL_CELL_INFO_LIST` has real values); `FW_READY` is already sent by the
-  GSI. Needs a telephony framework change (telephony-common is in the boot image) → ROM build.
+- **Signal bars 0**: Samsung rild never fills the standard signal indication (the framework's
+  SignalStrengthController receives nothing; `GET_CELL_INFO_LIST` fails with error 63; cell info
+  only arrives twice at boot). It reports bars **only** through Samsung's HIDL
+  `ISehRadioIndication.signalLevelInfoChanged(SehSignalBar{lteLevel, nrLevel, ...})`, every
+  2–15 s. The GSI's telephony (TrebleDroid patch "Initialize Samsung HIDL ISehRadio") registers
+  for it and sends `FW_READY=1` but just logs and drops it. Proven on-device (2026-09-24,
+  `tools/seh-signal`): registering for it gets `lte=4` reports, and pushing a SignalStrength into
+  `ITelephonyRegistry.notifySignalStrengthForPhoneId` (as root) shows bars in the status bar.
+  **Not shipped as a module**: rild keeps a single ISehRadio client, restarts itself when that
+  client dies, and hangs (killing data) if a two-way call like `needSettingValueIndication` isn't
+  answered. The first boot version didn't start the hwbinder thread pool, so rild hung. The fix
+  belongs in the ROM: in the GSI's `signalLevelInfoChanged` handler (RadioNetworkProxy), build an
+  LTE/NR SignalStrength from the bar level and feed it to SignalStrengthController.
 - **Outer-screen boot logo** stays until the first fold (needs a fix that doesn't change device state).
 - **Phone first-start ANR** still happens once per boot (recovers).
 - **Refresh rate**: adaptive mode didn't seem to reach 120 Hz when interacting. Workaround in use:

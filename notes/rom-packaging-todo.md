@@ -13,8 +13,10 @@ currently delivered via Magisk that must be baked in. See notes/procedure.md for
 - [ ] IMS APN + carrier_volte_available: make automatic per SIM, not hand-set for 505-01
 
 ## Framework fixes to do in source
-- [ ] **Signal bars**: synthesize SignalStrength from registered CellInfo when Samsung RIL returns
-      all-invalid values (telephony-common is in the boot image — must be a real build)
+- [ ] **Signal bars**: in RadioNetworkProxy's HIDL `ISehRadioIndication.signalLevelInfoChanged`
+      (TrebleDroid patch 0009, currently log-only), turn `SehSignalBar.lteLevel/nrLevel` into a
+      SignalStrength and deliver it like `currentSignalStrength` (SignalStrengthController). Also
+      send `CA_ENABLED=1` with `FW_READY=1`. Proven with `tools/seh-signal`; see procedure.md.
 - [ ] Resend SET_UNSOLICITED_RESPONSE_FILTER / device state when the radio becomes available
       (DeviceStateMonitor caches the failed boot-time send)
 - [ ] Phone/rild startup: phone process blocks in IRadio.getService during rild's slow init

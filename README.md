@@ -52,7 +52,7 @@ Don't `ctl.restart ril-daemon` to fix a slow phone start — it breaks the finge
 - ✅ Speakerphone and Bluetooth audio in calls
 - ✅ SMS send/receive (over IMS), MMS send/receive
 - ✅ RCS chats in Google Messages (needs Play Integrity BASIC + number entered manually, see install step 5)
-- ⚠️ Signal bars always show 0 (Samsung RIL returns empty signal strength) — deferred to ROM build
+- ⚠️ Signal bars always show 0. Samsung's RIL only reports bars through its own `ISehRadio` callback. The fix is proven but left for the ROM build (a side service can hang the RIL).
 
 **Data & connectivity**
 - ✅ Mobile data, Wi-Fi, Bluetooth (headphones, controller), airplane mode

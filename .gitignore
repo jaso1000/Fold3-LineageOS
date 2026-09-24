@@ -16,3 +16,7 @@ magisk-src/fold3-fingerprint-fix/*.dex
 
 # Committed prebuilt module zips (see prebuilt/README.md)
 !prebuilt/*.zip
+magisk-src/fold3-signal-bars/*.dex
+tools/seh-signal/out/
+tools/seh-signal/stubs/
+tools/seh-signal/gen/

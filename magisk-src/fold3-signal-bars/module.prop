@@ -1,0 +1,6 @@
+id=fold3-signal-bars
+name=Fold3 signal bars
+version=v1
+versionCode=1
+author=jason
+description=Samsung's RIL reports signal only via its own ISehRadio signalLevelInfoChanged; register for it and push the level to TelephonyRegistry so the status bar shows bars.
