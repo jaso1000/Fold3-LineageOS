@@ -5,6 +5,24 @@
 # while it's the active screen. Same scale as the inner panel: sysfs = float * 510.
 until [ "$(getprop sys.boot_completed)" = "1" ]; do sleep 1; done
 
+# Double tap to wake: the Samsung touch drivers (inner stm_ts_spi = tsp1, outer stm_ts = tsp2) only
+# arm their low-power double-tap ("aot") mode when told to; they then report KEY_WAKEUP. Follow the
+# Settings toggle, and re-assert periodically in case a driver reset clears it.
+(
+    last=""
+    n=0
+    while true; do
+        v=$(settings get secure double_tap_to_wake 2>/dev/null)
+        [ "$v" = "1" ] || v=0
+        if [ "$v" != "$last" ] || [ $((n % 30)) -eq 0 ]; then
+            for t in tsp1 tsp2; do echo "aot_enable,$v" > /sys/class/sec/$t/cmd 2>/dev/null; done
+            last=$v
+        fi
+        n=$((n + 1))
+        sleep 2
+    done
+) &
+
 INNER=/sys/class/backlight/panel0-backlight/brightness
 OUTER=/sys/class/backlight/panel1-backlight/brightness
 last=-1

@@ -27,4 +27,13 @@
     <!-- Hinge on the inner 1768x2208 panel, vertical at the middle. This is a plain string in
          AOSP (not a string-array); a type mismatch makes the RRO entry silently not apply. -->
     <string name="config_display_features" translatable="false">fold-[884,0,884,2208]</string>
+
+    <!-- Auto-brightness: the GSI already carries Samsung SM8350's curve (config_autoBrightnessLevels,
+         config_autoBrightnessDisplayValuesNits, config_screenBrightnessNits/Backlight, same as the
+         LineageOS samsung-sm8350 device tree) but leaves the feature switched off. -->
+    <bool name="config_automatic_brightness_available">true</bool>
+
+    <!-- Show "Double tap to wake"; fold3-fold-config's service.sh applies it to both touch
+         panels via the sec_input "aot_enable" command (the driver then sends KEY_WAKEUP). -->
+    <bool name="config_supportDoubleTapWake">true</bool>
 </resources>

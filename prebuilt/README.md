@@ -8,7 +8,7 @@ Install with Magisk (Modules → Install from storage), or
 | Zip | Version | What it does |
 |---|---|---|
 | `fold3-outer-touch.zip` | v2 | Patched GSI `libpowermanager.so`: both touch panels on at screen-on |
-| `fold3-fold-config.zip` | v5 | Fold states/postures/hinge RRO (cover selfie, Flex mode), Aperture lens overlay, Samsung hidden camera ids, outer-screen brightness |
+| `fold3-fold-config.zip` | v6 | Fold states/postures/hinge RRO (cover selfie, Flex mode), auto-brightness, double tap to wake, Aperture lens overlay, Samsung hidden camera ids, outer-screen brightness |
 | `fold3-fingerprint-fix.zip` | v3 | Re-sends `setActiveGroup` to Samsung's fingerprint HAL at boot and on HAL/rild restarts |
 | `fold3-floss-ims.zip` | v18 | Floss IMS (VoLTE calls/SMS/MMS) built from `../floss-ims`, as a priv-app |
 | `fold3-net-fixes.zip` | v1 | Hotspot DNS fix |

@@ -58,12 +58,13 @@ currently delivered via Magisk that must be baked in. See notes/procedure.md for
 - [ ] AMR-WB/EVS (HD voice), SMS delivery-report handling (RP-ACK currently fed as a dummy status report); proper uplink gain instead of AGC
 
 ## Cosmetic / later
-- [ ] Double-tap to wake on both panels: check it works; if not, wire the Samsung touch driver's gesture mode (stm_fold `input_open`/LP mode) into the framework's double-tap setting
 - [ ] Outer-screen boot logo: at boot, power off the inactive panel via DisplayManager so HWC sends it a real display-off (the bootloader leaves it lit, `dpms=On`). Don't flip device state. Try `cmd display power-off/power-reset` first. See procedure.md.
 
 ## Added 2026-09-24 evening
 - [ ] Hotspot DNS: TetheringNext never starts a DNS proxy → currently DNAT to 8.8.8.8 (module fold3-net-fixes)
 - [ ] Fold device-state config (foldedDeviceStates/postures/display_features) — RRO overlays/Fold3FrameworkOverlay
+- [ ] Auto-brightness + double tap to wake (RRO values) and DT2W: set `aot_enable` from the power HAL's DOUBLE_TAP_TO_WAKE mode (or an init/settings trigger) instead of the polling helper
+- [ ] Always-on display: doze config (see sm8350-common overlay: config_dozeAlwaysOnDisplayAvailable, config_dozeComponent, ...) + panel doze power mode
 - [ ] Outer display brightness: lights HAL/framework path for the second panel (currently a polling helper writing panel1-backlight)
 - [ ] Adaptive refresh rate: make it ramp to 120 Hz on interaction (DisplayModeDirector / peak refresh config, touch boost) instead of forcing min = 120 Hz
 - [ ] Cameras: set `persist.sys.phh.samsung.camera_ids=true` (or LineageOS samsung camera provider with `EXTRA_IDS`) and ship the Aperture aux-camera overlay

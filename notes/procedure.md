@@ -214,6 +214,18 @@ BiTGApps Core doesn't pre-grant GSF: `pm grant com.google.android.gsf android.pe
   outer panel is lit; reads `mTemporaryScreenBrightness` from `dumpsys display` so it follows
   the slider live (0.3 s poll, only while folded).
 
+### Auto-brightness, double tap to wake — module `fold3-fold-config` (RRO + service.sh)
+- **Auto-brightness**: the light sensor (AMS TMD4907, `android.sensor.light`) works and the GSI already
+  carries Samsung SM8350's curve (`config_autoBrightnessLevels`/`DisplayValuesNits`,
+  `config_screenBrightnessNits`/`Backlight`, same as LineageOS samsung-sm8350), but
+  `config_automatic_brightness_available` was false. The RRO sets it to true. The outer panel follows
+  via the brightness helper.
+- **Double tap to wake**: both Samsung touch drivers support the sec_input command `aot_enable,1`
+  (`/sys/class/sec/tsp1` = inner stm_ts_spi, `tsp2` = outer stm_ts; `doubletap_enable` returns NA).
+  In low-power mode a double tap reports `KEY_WAKEUP`, which Android handles natively. The RRO sets
+  `config_supportDoubleTapWake=true` (Settings toggle, `secure double_tap_to_wake`), and service.sh
+  writes `aot_enable,<setting>` to both panels at boot, on change, and every ~60 s.
+
 ### Disabled: `fold3-boot-splash`
 Flipping device state CLOSE→reset at boot cleared the outer-screen boot logo but kills Samsung's
 fingerprint HAL; the restarted HAL never gets `setActiveGroup` → no sensor, and boot cleanup
