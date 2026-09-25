@@ -51,7 +51,10 @@ currently delivered via Magisk that must be baked in. See notes/procedure.md for
 
 ## Must bake in (currently Magisk modules / manual steps)
 - [ ] libpowermanager miscpower mode -1 (outer touch) — source fix in phh's frameworks/native patch
-- [ ] Samsung Codec2 seccomp `mremap` rule (storage/media/fingerprint) — bind-mount at boot
+- [x] Samsung Codec2 seccomp `mremap` rule (storage/media/fingerprint) — **already upstream**:
+      TrebleDroid device_phh_treble merged the same fix on 2026-07-26 (rw-system.sh bind-mounts a
+      copy of the policy with `mremap: arg3 == 3` → `mremap: 1`; the JJZH3 vendor has exactly that
+      line). Only confirm on the first boot of our build that the module isn't needed.
 - [ ] device_state_configuration.xml lid-switch fix (dual-screen) — bind-mount at boot
 - [ ] Floss IMS (`floss-ims/`) as priv-app + privapp-permissions + hidden-API exemptions
 - [ ] GSF runtime permissions (default-permissions XML)
