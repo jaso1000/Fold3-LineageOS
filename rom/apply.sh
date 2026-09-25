@@ -66,7 +66,7 @@ for dir in "$REPO"/rom/patches/*/; do
     [ "$tree" == build ] && tree=build/make
     [ "$tree" == device/phh/treble ] || [ -d "$TOP/$tree" ] || { echo "no $tree" >&2; exit 1; }
     for patch in "$dir"*.patch; do
-        subject="$(sed -n 's/^Subject: \(\[PATCH[^]]*\] \)\?//p' "$patch" | head -1)"
+        subject="$(git mailinfo /dev/null /dev/null < "$patch" | sed -n 's/^Subject: //p')"
         if git -C "$TOP/$tree" log --format=%s -50 | grep -qxF "$subject"; then
             echo "already applied: $tree: $subject"
         else
