@@ -87,7 +87,8 @@ Don't `ctl.restart ril-daemon` to fix a slow phone start — it breaks the finge
 - ✅ Rear main camera, inner (under-display) selfie, cover-screen selfie, flashlight
 - ✅ Ultra-wide and telephoto: photos from every lens, video recording with sound
 - ✅ USB-C (digital) headphones: playback, mic, inline volume buttons; known ones work when plugged in while locked
-- ☐ Speaker / Bluetooth / call audio (earpiece, speaker, USB headset mic) re-checked with Samsung's audio policy
+- ✅ Speaker and Bluetooth audio re-checked with Samsung's audio policy
+- ☐ Call audio with Samsung's audio policy: earpiece, speakerphone, USB headset mic
 - ✅ USB-C dock: keyboard, mouse, USB hub, external monitor as a separate desktop (Android 16 desktop mode), charging passthrough
 - ✅ Dock security like stock: unknown devices plugged in while locked stay blocked until unlock, then come up without replugging; devices used before (remembered) work while locked; locking while docked keeps connected devices working
 
