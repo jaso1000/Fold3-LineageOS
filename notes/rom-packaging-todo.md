@@ -9,10 +9,22 @@ currently delivered via Magisk that must be baked in. See notes/procedure.md for
   Fold5 Exynoobs ROM) and official LineageOS status come later, if ever.
 - **Target firmware**: F926BXXSJJZH3 is Samsung's **final** Fold3 firmware (Aug 2026 patch;
   support ended Sep 2026). Vendor, kernel and bootloader stay frozen there; users flash it first.
-- **Machine**: Windows desktop, WSL2 Ubuntu 24.04. Source inside the Linux filesystem (not
-  `/mnt/c`), about 400 GB free on NVMe, `.wslconfig` memory 32–48 GB, most cores, swap 32 GB. Exclude
-  the WSL disk from Defender. Attach the phone to WSL with usbipd-win (Odin stays on Windows).
-  Run Claude Code inside Ubuntu with this repo cloned there.
+- **Machine**: Windows desktop, WSL2 Ubuntu 24.04. Run Claude Code inside Ubuntu with this repo
+  cloned there. Attach the phone to WSL with usbipd-win (Odin stays on Windows).
+  - **Storage (updated 2026-09-25)**: the desktop's internal SSD is short on space, so the WSL
+    distro goes on an **external USB HDD** (NTFS, USB 3 port):
+    `wsl --install -d Ubuntu-24.04 --location E:\WSL` (or `wsl --manage Ubuntu-24.04 --move`).
+    Exclude that folder from Defender. Run `wsl --shutdown` before unplugging.
+  - **Hybrid layout if the SSD has ~100–150 GB free**: source (mostly read) on the HDD; `out/` and
+    ccache (heavy writes) on a second VHDX on the internal SSD, attached with `wsl --mount --vhd`.
+  - HDD tuning: shallow sync (`repo init --depth=1`, `repo sync -c --no-tags -j4`), large
+    `.wslconfig` memory so the page cache hides seek latency, keep WSL running between builds.
+    Expect sync 3–6 h, first build 6–10+ h, incrementals 15–40 min.
+  - Still unknown: desktop RAM and free SSD space → size `.wslconfig` (memory 32–48 GB, most
+    cores, swap 32 GB) and decide on the hybrid layout.
+  - Fallbacks: apply to **Crave.io** (free ROM build servers, invite-only) in parallel; buy a 1 TB
+    SSD (~AUD 100–150) if HDD iteration is too slow. Hetzner Cloud doubled its prices in June 2026
+    (CCX33 ~€165/mo), so it's no longer a cheap option; cloud spot VMs are the paid fallback.
 - **Identity**: unofficial build name, own release keys (kept out of the repo, backed up), vanilla
   (GApps flashed separately), releases on this repo's GitHub Releases (kept for the ROM).
 - **Milestones**
