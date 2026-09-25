@@ -5,12 +5,13 @@ toward a packaged ROM later.
 
 Device: Samsung Galaxy Z Fold3, SM-F926B (Australian variant), codename **q2q**, Snapdragon 888 (SM8350).
 
-## Status: Android 16 daily driver (updated 2026-09-24)
+## Status: Android 16 daily driver (updated 2026-09-26)
 
 Running on Samsung's **final** Fold3 firmware, F926BXXSJJZH3 (August 2026 patch). Samsung ended
 all updates for the Fold3 in September 2026.
 
-LineageOS 23.2 (Android 16) TrebleDroid GSI + BiTGApps Core, rooted with Magisk, on the stock
+LineageOS 23.2 (Android 16) TrebleDroid GSI, **now built from source by this project** (2026-09-26 build,
+September 2026 security patch; see "Next: a real ROM build") + MindTheGapps, rooted with Magisk, on the stock
 Samsung Android 15 vendor (`F926BXXSJJZH3`). Nearly everything works, including **VoLTE calls on
 Telstra/Boost** and both screens. Fixes are delivered as small Magisk modules (ready-made zips in
 [`prebuilt/`](prebuilt/), sources in `magisk-src/` and `scripts/`, the patched VoLTE app in
@@ -25,7 +26,7 @@ Telstra/Boost** and both screens. Fixes are delivered as small Magisk modules (r
 | Outer screen stuck on the boot logo / no display switching | `<lid-switch>` condition in Samsung's device-state config never true | Edited `device_state_configuration.xml` in vendor | vendor image built by `scripts/make-vendor-image.sh` |
 | Outer touchscreen dead | GSI calls Samsung miscpower HAL with hard-coded "main display" mode | Patch 2 instructions in `libpowermanager.so` (mode -1) | module `fold3-outer-touch` (`scripts/make-outer-touch-module.sh`) |
 | No `/sdcard`, no media/"speakers", Google sign-in fails, fingerprint gone | Samsung Codec2 HAL killed by its seccomp policy (`mremap`), hanging MediaCodecList and StorageManagerService | Widen that one seccomp rule | module `fold3-media-c2-seccomp` (`scripts/make-media-c2-seccomp-module.sh`) |
-| Google sign-in "Checking info" | GSF missing runtime permissions (BiTGApps Core) | `pm grant` GSF permissions | manual (TODO: default-permissions XML) |
+| Google sign-in "Checking info" | GSF missing runtime permissions (BiTGApps Core) | Not needed with MindTheGapps (ships default permissions); with BiTGApps, `pm grant` GSF permissions | — |
 | No calls (Telstra has no 3G) | No IMS stack usable with Samsung's vendor | phh's Floss IMS, **patched**: direct-200/early-media handling, conditional preconditions, RFC 3966 `+CC` numbers, SMS SMSC decoding, BYE both directions, caller ID, real P-ANI, VoIP audio mode, RNNoise bypass + AGC, jitter buffer, all AMR modes, DTMF, re-register alarm, priv-app permissions | module `fold3-floss-ims` (source `floss-ims/`, changes in `patches/floss-ims/`, `scripts/make-floss-module.sh`) + IMS APN + `carrier_volte_available` override |
 | Phone app / no network after boot (ANR loop) | Phone blocks on slow rild init at startup | Disabled `com.android.phone/.security.SafetySourceReceiver`; recovers on its own now | manual `pm disable` (root cause still open) |
 | Hotspot "connected, no internet" | Tethering never starts a DNS proxy; clients' DNS goes nowhere | DNAT hotspot DNS to 8.8.8.8 | module `fold3-net-fixes` |
@@ -35,7 +36,7 @@ Telstra/Boost** and both screens. Fixes are delivered as small Magisk modules (r
 | No auto-brightness, double tap to wake or always-on display | The GSI ships Samsung SM8350's brightness curve but leaves `config_automatic_brightness_available` off; double-tap isn't wired to the touch drivers | RRO turns on auto-brightness, the double-tap setting and AOD (doze), with AOD brightness raised from 1/255 to 15% (inner) and 10% on the outer screen (`persist.fold3.outer_aod` to tune); helper sends `aot_enable,<0/1>` to both touch panels (`/sys/class/sec/tsp1`, `tsp2`) following the setting | module `fold3-fold-config` (overlay + `service.sh`) |
 | USB-C dock: only charges (no keyboard/mouse, no monitor), then only mirrors | Samsung's `usb_notify` boots in lock state `SKY_DEFAULT`, which it treats as "restricted", so it refuses USB host (and with it DisplayPort). One UI's UsbHostRestrictor normally writes `SUNNY_WORK_MODE`. Android 16's desktop mode also needs the desktop-experience developer flags | Drive `usb_sl` like One UI's UsbHostRestrictor: unlocked `SUNNY_WORK_MODE`; locked with a secure lock screen `RAINY_RESTRICT_MODE` (new USB devices blocked, already-connected keep working; `block_usb_lock=0` gives `CLOUDY_WORK_MODE`). Re-plug USB host on unlock if something was blocked. Turn on freeform, force desktop mode on external displays, and desktop experience features; enable new external displays | module `fold3-desktop` |
 | USB-C headphones silent (audio stays on the speaker, or goes nowhere) | The GSI loads the vendor's generic `audio_policy_configuration.xml`, which has no USB routing. With Qualcomm USB offload on, only the primary HAL's DSP path can play to a USB headset. One UI uses Samsung's `audio_policy_configuration_sec.xml` | Bind-mount Samsung's `_sec` policy over the default at boot | module `fold3-usb-audio` |
-| Android Auto: "Communication error 22 - not preinstalled" | Since Android 10 Android Auto must be a privileged system app; BiTGApps Core doesn't ship it | Put the Play Store install into `/system/priv-app` with a privapp-permissions allowlist (Play updates still apply on top) | module `fold3-android-auto`, built from your own phone with `scripts/make-android-auto-module.sh` (Google's APK isn't in the repo) |
+| Android Auto: "Communication error 22 - not preinstalled" | Since Android 10 Android Auto must be a privileged system app; BiTGApps Core doesn't ship it | MindTheGapps ships a privileged Android Auto stub; update it from the Play Store. With BiTGApps: put the Play Store install into `/system/priv-app` | MindTheGapps (with BiTGApps: module `fold3-android-auto` via `scripts/make-android-auto-module.sh`) |
 | Fingerprint sensor stops detecting / enrollment lost | Samsung HAL loses its active user after boot and after every rild restart; Android only sends `setActiveGroup` once | Re-send `setActiveGroup` the moment the HAL starts (before system_server touches it), on every HAL restart, and after rild restarts | module `fold3-fingerprint-fix` (`tools/fp-active-group/`) |
 
 Disabled: `fold3-boot-splash` (cleared the outer-screen boot logo but killed the fingerprint HAL).
@@ -160,7 +161,10 @@ this repo's GitHub Releases.
    image (`truncate -s +1700M system.img && e2fsck -f system.img && resize2fs system.img`) so the
    GApps installer has room.
 2. `adb push` it to `/tmp` in recovery → Install → Install Image → **System**.
-3. Install [BiTGApps](https://bitgapps.io) **Core** for Android 16 (arm64) as a normal zip.
+3. Install [MindTheGapps](https://github.com/MindTheGapps/16.0.0-arm64/releases) for Android 16 (arm64)
+   as a normal zip (verified 2026-09-26 on the self-built GSI; includes an Android Auto stub — update it
+   from the Play Store). [BiTGApps](https://bitgapps.io) **Core** also works but needs the GSF permission
+   grants and `fold3-android-auto`.
    (MindTheGapps' setup wizard hangs on this phone.)
 4. **Format Data**, reboot.
 
@@ -206,7 +210,7 @@ replaces `/vendor/etc/devicestate/device_state_configuration.xml` with Samsung's
 - Fold3 recovery (Azkali): https://xdaforums.com/t/orangefox-and-twrp-recovery-recovery-for-sm-f926b.4660021/ · https://gitlab.com/azkali-samsung/q2q
 - DynaPatch (flash GSIs to dynamic partitions): https://xdaforums.com/t/guide-direct-flashing-gsi-image-to-logical-partitions-on-samsung-galaxy-with-dynamic-partitions.4340947/
 - samloader-rs: https://github.com/topjohnwu/samloader-rs · Heimdall: https://github.com/Benjamin-Dobell/Heimdall · Magisk: https://github.com/topjohnwu/Magisk
-- BiTGApps: https://bitgapps.io
+- MindTheGapps: https://github.com/MindTheGapps/16.0.0-arm64 · BiTGApps: https://bitgapps.io
 - Floss IMS (phh): https://github.com/phhusson/ims · TrebleDroid: https://github.com/TrebleDroid/treble_experimentations
 - q2q kernel source (driver analysis): https://github.com/cawilliamson/android_kernel_samsung_q2q
 - Reference device trees: Exynoobs sm8550-common / q5q (Fold5), samsung-sm8350

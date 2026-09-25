@@ -40,6 +40,10 @@ currently delivered via Magisk that must be baked in. See notes/procedure.md for
   from the built-in Play Integrity spoof, not PlayIntegrityFork.
 - **Milestones**
   1. Reproduce the current GSI from source, unchanged; it must boot identically.
+     **Done 2026-09-26**: built in 4 h 39 min (`lineage_arm64_bvN4-bp4a-userdebug`, MisterZtr tag
+     v2026.05.24, security patch 2026-09-01), flashed over the May GSI without wiping data, with
+     MindTheGapps instead of BiTGApps. Calls/data, storage, fingerprint, Google apps all fine.
+     `libpowermanager.so` is byte-identical to the May build, so `fold3-outer-touch` still applies.
   2. Bake in everything under "Must bake in" (no Magisk needed).
   3. Framework fixes below (signal bars first; they're proven).
   4. Clean-install test on the phone, then release notes, XDA thread, licence notes (Floss GPLv2).
@@ -57,7 +61,7 @@ currently delivered via Magisk that must be baked in. See notes/procedure.md for
       line). Only confirm on the first boot of our build that the module isn't needed.
 - [ ] device_state_configuration.xml lid-switch fix (dual-screen) — bind-mount at boot
 - [ ] Floss IMS (`floss-ims/`) as priv-app + privapp-permissions + hidden-API exemptions
-- [ ] GSF runtime permissions (default-permissions XML)
+- [x] GSF runtime permissions — MindTheGapps ships them (switched from BiTGApps 2026-09-26)
 - [ ] `pm disable com.android.phone/.security.SafetySourceReceiver` (boot ANR mitigation) — or fix properly
 - [ ] IMS APN + carrier_volte_available: make automatic per SIM, not hand-set for 505-01
 
