@@ -29,6 +29,10 @@ currently delivered via Magisk that must be baked in. See notes/procedure.md for
     (CCX33 ~€165/mo), so it's no longer a cheap option; cloud spot VMs are the paid fallback.
 - **Identity**: unofficial build name, own release keys (kept out of the repo, backed up), vanilla
   (GApps flashed separately), releases on this repo's GitHub Releases (kept for the ROM).
+- **Scope (confirmed 2026-09-25)**: the full plan — every fix built in, not just a GSI rebuild with
+  Magisk modules on top. Main reason: MisterZtr's last GSI release is 2026-05-24, so building our own
+  is the only way to keep getting LineageOS monthly security patches for the Android layer
+  (vendor/kernel stay frozen at Samsung's Aug 2026 patch either way).
 - **Root (decided 2026-09-25)**: the ROM ships **without root** and nothing in it depends on
   Magisk. Development builds are userdebug, so Developer options → Rooted debugging gives `adb root`
   for logs and testing. Full root stays optional: the ROM only replaces `system`, so a
