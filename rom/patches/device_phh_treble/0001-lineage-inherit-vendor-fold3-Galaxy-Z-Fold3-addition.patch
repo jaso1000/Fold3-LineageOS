@@ -1,0 +1,24 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Jason Walker <59085866+jaso1000@users.noreply.github.com>
+Date: Sat, 26 Sep 2026 08:59:49 +1000
+Subject: [PATCH] lineage: inherit vendor/fold3 (Galaxy Z Fold3 additions) if
+ present
+
+---
+ lineage.mk | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/lineage.mk b/lineage.mk
+index 527e4a1..b5f177d 100644
+--- a/lineage.mk
++++ b/lineage.mk
+@@ -17,3 +17,6 @@ PRODUCT_PACKAGES += apns-conf.xml
+ $(call soong_config_set,surfaceflinger,udfps_lib,//hardware/oplus:libudfps_extension.oplus)
+ 
+ TARGET_SYSTEM_PROP += device/phh/treble/system.prop
++
++# Galaxy Z Fold3 (SM-F926B) additions, see github.com/jaso1000/Fold3-LineageOS
++$(call inherit-product-if-exists, vendor/fold3/fold3.mk)
+-- 
+2.43.0
+

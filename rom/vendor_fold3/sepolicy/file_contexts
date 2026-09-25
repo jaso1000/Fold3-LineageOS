@@ -1,0 +1,2 @@
+# Fold3 boot scripts run in TrebleDroid's phhsu_daemon domain (like rw-system.sh)
+/system/bin/fold3-.*\.sh    u:object_r:phhsu_exec:s0

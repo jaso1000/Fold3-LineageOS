@@ -1,0 +1,40 @@
+# Fold3 (SM-F926B) boot fixes. All scripts run as root in TrebleDroid's phhsu_daemon domain,
+# the same context as rw-system.sh / phh-on-boot.sh. Each one exits at once on other devices.
+
+# Before system_server/audioserver start: dual-screen device-state config, USB audio policy
+on post-fs
+    exec u:r:phhsu_daemon:s0 root -- /system/bin/fold3-early.sh
+
+on post-fs-data
+    mkdir /data/misc/fold3 0700 root root
+    start fold3_fingerprint
+
+# Samsung fingerprint HAL: re-send setActiveGroup at HAL start and after HAL/rild restarts
+service fold3_fingerprint /system/bin/fold3-fingerprint.sh
+    user root
+    oneshot
+    disabled
+    seclabel u:r:phhsu_daemon:s0
+
+service fold3_fold_config /system/bin/fold3-fold-config.sh
+    user root
+    oneshot
+    disabled
+    seclabel u:r:phhsu_daemon:s0
+
+service fold3_desktop /system/bin/fold3-desktop.sh
+    user root
+    oneshot
+    disabled
+    seclabel u:r:phhsu_daemon:s0
+
+service fold3_boot /system/bin/fold3-boot.sh
+    user root
+    oneshot
+    disabled
+    seclabel u:r:phhsu_daemon:s0
+
+on property:sys.boot_completed=1
+    start fold3_fold_config
+    start fold3_desktop
+    start fold3_boot

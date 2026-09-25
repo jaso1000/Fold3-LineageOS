@@ -1,0 +1,30 @@
+// Fold3 ROM additions. Overlay sources and the Floss APK are copied in by rom/apply.sh
+// from overlays/ and prebuilt/fold3-floss-ims.zip.
+
+runtime_resource_overlay {
+    name: "Fold3FrameworkOverlay",
+    product_specific: true,
+    sdk_version: "current",
+    manifest: "overlays/Fold3FrameworkOverlay/AndroidManifest.xml",
+    resource_dirs: ["overlays/Fold3FrameworkOverlay/res"],
+}
+
+runtime_resource_overlay {
+    name: "Fold3ApertureOverlay",
+    product_specific: true,
+    sdk_version: "current",
+    manifest: "overlays/Fold3ApertureOverlay/AndroidManifest.xml",
+    resource_dirs: ["overlays/Fold3ApertureOverlay/res"],
+}
+
+// phh's Floss IMS with our Telstra patches (source: floss-ims/, patches/floss-ims/). Privileged,
+// not android.uid.system; permissions in privapp-permissions-me.phh.ims.xml.
+android_app_import {
+    name: "FlossIms",
+    apk: "prebuilt/FlossIms/FlossIms.apk",
+    privileged: true,
+    certificate: "platform",
+    dex_preopt: {
+        enabled: false,
+    },
+}

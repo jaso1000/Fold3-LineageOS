@@ -1,0 +1,42 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Jason Walker <59085866+jaso1000@users.noreply.github.com>
+Date: Sat, 26 Sep 2026 08:59:48 +1000
+Subject: [PATCH] powermanager: Samsung miscpower: power both touch panels on
+ foldables
+
+setInteractiveAsync(interactive, dualScreenPolicy) was called with policy 0 (main display only), so on the Galaxy Z Fold3 the cover screen touch panel (tsp2) was never enabled. -1 makes every panel follow the interactive state, like One UI.
+
+Change-Id: I78634727d14d1066be793455bb35b1c3ae158b7a
+---
+ services/powermanager/PowerHalWrapper.cpp | 8 ++++++--
+ 1 file changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/services/powermanager/PowerHalWrapper.cpp b/services/powermanager/PowerHalWrapper.cpp
+index 7973386..a7f64ae 100644
+--- a/services/powermanager/PowerHalWrapper.cpp
++++ b/services/powermanager/PowerHalWrapper.cpp
+@@ -239,7 +239,9 @@ HalResult<void> AidlHalWrapper::setMode(Aidl::Mode mode, bool enabled) {
+     size_t idx = static_cast<size_t>(mode);
+ 
+     if (mHandleSeh != nullptr && mode == Aidl::Mode::INTERACTIVE) {
+-        mHandleSeh->setInteractiveAsync(enabled, false);
++        // dualScreenPolicy -1: every panel follows "interactive" (0 = main display only,
++        // which left the Galaxy Z Fold3 cover-screen touch panel off)
++        mHandleSeh->setInteractiveAsync(enabled, -1);
+     }
+ 
+     // Quick return if mode is not supported by HAL
+@@ -361,7 +363,9 @@ HalResult<void> HidlHalWrapperSeh::sendPowerHint(V1_0::PowerHint hintId, uint32_
+ 
+ HalResult<void> HidlHalWrapperSeh::setInteractive(bool enabled) {
+     if(mHandleSeh != nullptr) {
+-        mHandleSeh->setInteractiveAsync(enabled, false);
++        // dualScreenPolicy -1: every panel follows "interactive" (0 = main display only,
++        // which left the Galaxy Z Fold3 cover-screen touch panel off)
++        mHandleSeh->setInteractiveAsync(enabled, -1);
+     }
+     auto ret = mHandle10->setInteractive(enabled);
+     return HalResult<void>::fromReturn(ret);
+-- 
+2.43.0
+
