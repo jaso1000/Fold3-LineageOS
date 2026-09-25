@@ -101,9 +101,9 @@ Don't `ctl.restart ril-daemon` to fix a slow phone start — it breaks the finge
 - ✅ Storage, Play Store / Google services, root
 - ✅ Google sign-in, Play Store installs (Messages, YouTube)
 - ✅ Play Integrity: BASIC (with PlayIntegrityFork); DEVICE/STRONG not expected with an unlocked bootloader
-- ☐ Several reboots in a row: network up within ~1 min, fingerprint still enrolled
+- ✅ Several reboots in a row: network, fingerprint and modules come back each time
 - ☐ Android Auto (installed, not yet tried in the car)
-- ☐ Overnight battery drain
+- ✅ Overnight battery drain: about the same as stock
 - ☐ A full day of normal use without crashes or lost network
 - ☐ Alarms fire while locked / in Doze
 - ⚠️ Banking apps / Wallet tap-to-pay: not used on this phone. Many banks' terms forbid modified or rooted OSes, and an unlocked bootloader only gets BASIC integrity. Keep banking on a stock, updated phone.
