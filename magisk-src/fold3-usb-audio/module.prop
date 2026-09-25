@@ -1,0 +1,6 @@
+id=fold3-usb-audio
+name=Fold3 USB-C headphones
+version=v1
+versionCode=1
+author=jason
+description=USB-C digital headphones/DACs: use Samsung's own audio policy (audio_policy_configuration_sec.xml, as One UI does), which routes USB headsets through the primary HAL's ADSP offload path.

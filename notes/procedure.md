@@ -264,6 +264,26 @@ BiTGApps Core doesn't pre-grant GSF: `pm grant com.google.android.gsf android.pe
   helper does a software re-plug: `echo ON_HOST_REPLUG > usb_control/disable; echo OFF > ...`, and DP stays
   up. Reading `usb_sl` logs a kernel line each time, so the helper caches its last write.
 
+- **Remembered devices (stock behaviour)**: devices plugged in while locked are refused
+  (`usb_match_any_interface_for_id: FAIL, it's not in whitelist`, interfaces "not authorized for
+  usage") unless they're in the lock-screen allowlist. One UI keeps a history of devices used while
+  unlocked (`/efs/usb_con_hist`, `vid:pid` lines) and writes `VPID:vid:pid:vid:pid...` to
+  `usb_control/whitelist_for_mdm`. The helper does the same with `/data/adb/fold3-usb-history`
+  (last 60), pushed at boot and on change.
+
+### USB-C headphones — module `fold3-usb-audio`
+- **Symptom**: digital USB-C earbuds enumerate (ALSA card, inline buttons work) but there's no sound.
+- **Cause**: audioserver loads `/vendor/etc/audio_policy_configuration.xml` (generic: primary + a2dpsink +
+  r_submix, no USB), giving `could not find HW module for device AUDIO_DEVICE_OUT_USB_HEADSET`. Adding
+  the plain `usb` module routes audio there, but with `vendor.audio.feature.usb_offload.enable=true` the
+  ADSP owns the playback PCM (`cannot open /dev/snd/pcmC1D0p`). Disabling offload let the AP stream
+  run, but it was silent. One UI loads `audio_policy_configuration_sec.xml`, whose **primary** module
+  lists the USB headset ports (the DSP offload path).
+- **Fix**: post-fs-data bind-mounts `_sec` over the default policy (no Samsung file shipped).
+  Speaker, Bluetooth and call routes also come from Samsung's policy now, so re-test them.
+- Unrelated: TrebleDroid's `me.phh.treble.app` crashes in `Desktop.kt:39` (NPE in onInputDeviceAdded)
+  when a USB HID device appears. It's harmless and only affects that app.
+
 ### Disabled: `fold3-boot-splash`
 Flipping device state CLOSE→reset at boot cleared the outer-screen boot logo but kills Samsung's
 fingerprint HAL; the restarted HAL never gets `setActiveGroup` → no sensor, and boot cleanup

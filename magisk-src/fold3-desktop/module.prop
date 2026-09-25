@@ -1,6 +1,6 @@
 id=fold3-desktop
 name=Fold3 USB-C dock / desktop mode
-version=v5
-versionCode=5
+version=v6
+versionCode=6
 author=jason
 description=USB-C docks + Android 16 desktop mode: drives Samsung usb_notify lock state (usb_sl) like One UI (unlocked=SUNNY, locked=RAINY/CLOUDY per block_usb_lock), desktop experience flags, enables new external displays.

@@ -34,6 +34,7 @@ Telstra/Boost** and both screens. Fixes are delivered as small Magisk modules (r
 | Outer screen brightness never changes | Only one backlight light (inner); Samsung HWC ignores per-display brightness | Helper mirrors live brightness to `panel1-backlight` | module `fold3-fold-config` (`service.sh`) |
 | No auto-brightness, double tap to wake or always-on display | The GSI ships Samsung SM8350's brightness curve but leaves `config_automatic_brightness_available` off; double-tap isn't wired to the touch drivers | RRO turns on auto-brightness, the double-tap setting and AOD (doze), with AOD brightness raised from 1/255 to 15%; helper sends `aot_enable,<0/1>` to both touch panels (`/sys/class/sec/tsp1`, `tsp2`) following the setting | module `fold3-fold-config` (overlay + `service.sh`) |
 | USB-C dock: only charges (no keyboard/mouse, no monitor), then only mirrors | Samsung's `usb_notify` boots in lock state `SKY_DEFAULT`, which it treats as "restricted", so it refuses USB host (and with it DisplayPort). One UI's UsbHostRestrictor normally writes `SUNNY_WORK_MODE`. Android 16's desktop mode also needs the desktop-experience developer flags | Drive `usb_sl` like One UI's UsbHostRestrictor: unlocked `SUNNY_WORK_MODE`; locked with a secure lock screen `RAINY_RESTRICT_MODE` (new USB devices blocked, already-connected keep working; `block_usb_lock=0` gives `CLOUDY_WORK_MODE`). Re-plug USB host on unlock if something was blocked. Turn on freeform, force desktop mode on external displays, and desktop experience features; enable new external displays | module `fold3-desktop` |
+| USB-C headphones silent (audio stays on the speaker, or goes nowhere) | The GSI loads the vendor's generic `audio_policy_configuration.xml`, which has no USB routing. With Qualcomm USB offload on, only the primary HAL's DSP path can play to a USB headset. One UI uses Samsung's `audio_policy_configuration_sec.xml` | Bind-mount Samsung's `_sec` policy over the default at boot | module `fold3-usb-audio` |
 | Fingerprint sensor stops detecting / enrollment lost | Samsung HAL loses its active user after boot and after every rild restart; Android only sends `setActiveGroup` once | Re-send `setActiveGroup` the moment the HAL starts (before system_server touches it), on every HAL restart, and after rild restarts | module `fold3-fingerprint-fix` (`tools/fp-active-group/`) |
 
 Disabled: `fold3-boot-splash` (cleared the outer-screen boot logo but killed the fingerprint HAL).
@@ -85,9 +86,10 @@ Don't `ctl.restart ril-daemon` to fix a slow phone start — it breaks the finge
 - ✅ Speakers / media playback, microphone, screen recording, volume keys
 - ✅ Rear main camera, inner (under-display) selfie, cover-screen selfie, flashlight
 - ✅ Ultra-wide and telephoto: photos from every lens, video recording with sound
-- ☐ Wired / USB-C headphones
+- ✅ USB-C (digital) headphones: playback, mic, inline volume buttons; known ones work when plugged in while locked
+- ☐ Speaker / Bluetooth / call audio (earpiece, speaker, USB headset mic) re-checked with Samsung's audio policy
 - ✅ USB-C dock: keyboard, mouse, USB hub, external monitor as a separate desktop (Android 16 desktop mode), charging passthrough
-- ✅ Dock security like stock: devices plugged in while locked stay blocked until unlock, then come up without replugging; locking while docked keeps connected devices working
+- ✅ Dock security like stock: unknown devices plugged in while locked stay blocked until unlock, then come up without replugging; devices used before (remembered) work while locked; locking while docked keeps connected devices working
 
 **Sensors & hardware**
 - ✅ Fingerprint (survives reboot; rarely the enrollment can still drop at boot if the HAL crashes, see procedure.md), haptics, proximity sensor, wireless charging

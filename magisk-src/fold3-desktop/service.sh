@@ -17,10 +17,37 @@
 # persist.wm.debug.desktop_experience_devopts=1, set in post-fs-data.sh); re-apply in case of
 # resets. New external displays can arrive disabled (they then just mirror the phone): enable them.
 SL=/sys/class/usb_notify/usb_control/usb_sl
+AL=/sys/class/usb_notify/usb_control/whitelist_for_mdm
+# Known-device list, like One UI's /efs/usb_con_hist (kept out of /efs on purpose): "vid:pid" per
+# line for every USB device seen while unlocked. Pushed to the kernel's lock-screen allowlist as
+# "VPID:vid:pid:vid:pid..." so known devices still work when plugged in while locked; unknown ones
+# stay blocked ("unmatched with allowlist for lockscreen").
+HIST=/data/adb/fold3-usb-history
+
+push_allowlist() {
+    [ -s $HIST ] || return
+    echo "VPID:$(tail -n 60 $HIST | tr '\n' ':' | sed 's/:$//')" > $AL 2>/dev/null
+}
+
+record_devices() {
+    changed=0
+    for d in /sys/bus/usb/devices/*; do
+        [ -f $d/idVendor ] || continue
+        [ "$(cat $d/authorized 2>/dev/null)" = "1" ] || continue
+        vp="$(cat $d/idVendor):$(cat $d/idProduct)"
+        case "$vp" in 1d6b:*) continue ;; esac   # root hubs
+        grep -qx "$vp" $HIST 2>/dev/null && continue
+        echo "$vp" >> $HIST
+        changed=1
+        echo "$(date '+%m-%d %T') remembered USB device $vp $(cat $d/product 2>/dev/null)" >> $LOG
+    done
+    [ $changed = 1 ] && push_allowlist
+}
 DP=/sys/class/drm/card0-DP-1/status
 LOG=/data/local/tmp/fold3-desktop.log
 
 until [ "$(getprop sys.boot_completed)" = "1" ]; do sleep 1; done
+push_allowlist
 n=0
 while true; do
     locked=$(dumpsys trust 2>/dev/null | grep -m1 -o 'deviceLocked=[01]')
@@ -56,6 +83,9 @@ while true; do
         fi
         cur=$want
     fi
+
+    # Learn devices while unlocked (the host may be off: only look when a controller exists)
+    [ "$want" = "SUNNY_WORK_MODE" ] && [ -e /sys/bus/usb/devices/usb1 ] && record_devices
 
     if [ $((n % 3)) -eq 0 ]; then
         [ "$(settings get global enable_freeform_support)" = "1" ] || settings put global enable_freeform_support 1
