@@ -253,6 +253,13 @@ then deletes the enrolled fingerprint. Kept in `magisk-src/`, disabled on the ph
   has no 3G in Australia. The network advertises emergency bearer support (`mEmcBearerSupport = 1`).
   Plan: EIMS PDN, then emergency REGISTER, then INVITE `urn:service:sos[.police|.ambulance|.fire]`,
   plus correct failure codes on 380. Test PDN + REGISTER only; **never dial 000 to test**.
+- **Progress (Floss patch 0007, v20)**: `SipHandler(emergency = true)` and a DUMP-protected
+  `EmergencyTestReceiver` (`am broadcast -a me.phh.ims.EMERGENCY_TEST --es step pdn|register -n
+  me.phh.ims/.EmergencyTestReceiver`). Verified on Telstra: the EIMS PDN (APN `sos`) comes up in <1 s with
+  two emergency P-CSCFs; emergency REGISTER with `;sos` goes 401 → AKA/IPsec → **200 OK**
+  (network-assigned expires=300); then de-REGISTER and release. Normal registration unaffected.
+  Still to do (the final INVITE can't be tested): INVITE `urn:service:sos` on the emergency
+  registration with P-Access-Network-Info, wired to `SERVICE_TYPE_EMERGENCY`; 380 handling.
 
 - **Signal bars 0**: Samsung rild never fills the standard signal indication (the framework's
   SignalStrengthController receives nothing; `GET_CELL_INFO_LIST` fails with error 63; cell info

@@ -1,0 +1,274 @@
+From 5dcbe852b14d67e5dd32122dd27b5125084ce23d Mon Sep 17 00:00:00 2001
+From: Jason Walker <59085866+jaso1000@users.noreply.github.com>
+Date: Fri, 25 Sep 2026 16:59:52 +1000
+Subject: [PATCH 7/7] Emergency (SOS) groundwork: EIMS PDN, emergency REGISTER,
+ test hooks
+
+SipHandler(emergency=true) uses the EIMS PDN and its P-CSCF, registers with the 'sos' Contact
+parameter (TS 24.229 5.1.6.2), skips the reg-event SUBSCRIBE and never reports registration to
+Android; adds register(expires), deregister() and shutdown(). EmergencyTestReceiver (DUMP-protected)
+runs step=pdn / step=register without ever placing a call. Verified on Telstra: EIMS PDN up with
+emergency P-CSCFs, emergency REGISTER 200 OK (expires=300), de-REGISTER sent.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ app/src/main/AndroidManifest.xml              |  4 +
+ .../java/me/phh/ims/EmergencyTestReceiver.kt  | 89 +++++++++++++++++++
+ app/src/main/java/me/phh/sip/SipHandler.kt    | 68 +++++++++++---
+ 3 files changed, 149 insertions(+), 12 deletions(-)
+ create mode 100644 app/src/main/java/me/phh/ims/EmergencyTestReceiver.kt
+
+diff --git a/app/src/main/AndroidManifest.xml b/app/src/main/AndroidManifest.xml
+index aad92da..964176a 100644
+--- a/app/src/main/AndroidManifest.xml
++++ b/app/src/main/AndroidManifest.xml
+@@ -51,6 +51,10 @@
+             <action android:name="android.telephony.ims.ImsService" />
+         </intent-filter>
+       </service>
++      <!-- Test-only emergency hooks (never place a call); shell/root only via DUMP -->
++      <receiver android:name=".EmergencyTestReceiver"
++          android:exported="true"
++          android:permission="android.permission.DUMP" />
+       <!--<receiver android:name=".AlarmBroadcastReceiver"
+       android:exported="false" />-->
+       <!--android:enabled="true"-->
+diff --git a/app/src/main/java/me/phh/ims/EmergencyTestReceiver.kt b/app/src/main/java/me/phh/ims/EmergencyTestReceiver.kt
+new file mode 100644
+index 0000000..16029e4
+--- /dev/null
++++ b/app/src/main/java/me/phh/ims/EmergencyTestReceiver.kt
+@@ -0,0 +1,89 @@
++package me.phh.ims
++
++import android.content.BroadcastReceiver
++import android.content.Context
++import android.content.Intent
++import android.net.ConnectivityManager
++import android.net.LinkProperties
++import android.net.Network
++import android.net.NetworkCapabilities
++import android.net.NetworkRequest
++import android.util.Log
++import kotlin.concurrent.thread
++
++/**
++ * Test-only hooks for building emergency (IMS SOS) support without ever placing an emergency call.
++ * Protected by android.permission.DUMP, so only shell/root can trigger it:
++ *   am broadcast -a me.phh.ims.EMERGENCY_TEST --es step pdn -n me.phh.ims/.EmergencyTestReceiver
++ *
++ * step=pdn: bring up the emergency IMS PDN (NET_CAPABILITY_EIMS), log what the network gives us
++ *           (interface, addresses, emergency P-CSCFs), then release it. No SIP traffic.
++ * step=register: emergency REGISTER (sos) on that PDN, then immediately de-REGISTER and release.
++ *           No INVITE, no number, nothing reaches an emergency centre.
++ */
++class EmergencyTestReceiver : BroadcastReceiver() {
++    companion object { const val TAG = "PHH EmergencyTest" }
++
++    override fun onReceive(context: Context, intent: Intent) {
++        val step = intent.getStringExtra("step") ?: "pdn"
++        Log.w(TAG, "Emergency test step=$step (no call is placed)")
++        when (step) {
++            "pdn" -> probePdn(context.applicationContext)
++            "register" -> testRegister(context.applicationContext)
++            else -> Log.w(TAG, "Unknown step $step")
++        }
++    }
++
++    private fun probePdn(ctxt: Context) {
++        val cm = ctxt.getSystemService(ConnectivityManager::class.java)
++        val req = NetworkRequest.Builder()
++            .addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
++            .addCapability(NetworkCapabilities.NET_CAPABILITY_EIMS)
++            .removeCapability(NetworkCapabilities.NET_CAPABILITY_NOT_RESTRICTED)
++            .build()
++        val cb = object : ConnectivityManager.NetworkCallback() {
++            override fun onAvailable(network: Network) {
++                Log.w(TAG, "EIMS network available: $network")
++            }
++            override fun onCapabilitiesChanged(network: Network, caps: NetworkCapabilities) {
++                Log.w(TAG, "EIMS caps: $caps")
++            }
++            override fun onLinkPropertiesChanged(network: Network, lp: LinkProperties) {
++                val pcscfs = try {
++                    lp.javaClass.getMethod("getPcscfServers").invoke(lp)
++                } catch (t: Throwable) { "?" }
++                Log.w(TAG, "EIMS link: iface=${lp.interfaceName} addrs=${lp.linkAddresses} pcscf=$pcscfs dns=${lp.dnsServers} mtu=${lp.mtu}")
++            }
++            override fun onUnavailable() { Log.w(TAG, "EIMS network unavailable (timeout/refused)") }
++            override fun onLost(network: Network) { Log.w(TAG, "EIMS network lost") }
++        }
++        Log.w(TAG, "Requesting EIMS network")
++        cm.requestNetwork(req, cb, 30_000)
++        thread {
++            Thread.sleep(50_000)
++            try { cm.unregisterNetworkCallback(cb) } catch (t: Throwable) {}
++            Log.w(TAG, "EIMS request released")
++        }
++    }
++
++    private fun testRegister(ctxt: Context) {
++        val sip = me.phh.sip.SipHandler(ctxt, emergency = true)
++        val okFlag = java.util.concurrent.atomic.AtomicBoolean(false)
++        val failFlag = java.util.concurrent.atomic.AtomicBoolean(false)
++        sip.imsReadyCallback = { okFlag.set(true); Log.w(TAG, "EMERGENCY REGISTER: 200 OK") }
++        sip.imsFailureCallback = { failFlag.set(true); Log.w(TAG, "EMERGENCY REGISTER: failed (see PHH SipHandler log)") }
++        sip.getVolteNetwork()
++        thread {
++            var waited = 0
++            while (!okFlag.get() && !failFlag.get() && waited < 60) { Thread.sleep(1000); waited++ }
++            Log.w(TAG, "Emergency register result: ok=${okFlag.get()} failed=${failFlag.get()} after ${waited}s")
++            if (okFlag.get()) {
++                Thread.sleep(3000)
++                try { sip.deregister() } catch (t: Throwable) { Log.w(TAG, "deregister failed", t) }
++                Thread.sleep(5000)
++            }
++            sip.shutdown()
++            Log.w(TAG, "Emergency register test finished")
++        }
++    }
++}
+diff --git a/app/src/main/java/me/phh/sip/SipHandler.kt b/app/src/main/java/me/phh/sip/SipHandler.kt
+index 805126a..bf3c0e9 100644
+--- a/app/src/main/java/me/phh/sip/SipHandler.kt
++++ b/app/src/main/java/me/phh/sip/SipHandler.kt
+@@ -36,7 +36,12 @@ private data class smsHeaders(
+     val cseq: String,
+ )
+ 
+-class SipHandler(val ctxt: Context) {
++/**
++ * @param emergency IMS emergency (SOS) instance, per 3GPP TS 24.229 5.1.6: uses the emergency PDN
++ * (NET_CAPABILITY_EIMS) and its P-CSCF, registers with the "sos" Contact parameter, doesn't subscribe
++ * to the reg event package and never reports registration to Android.
++ */
++class SipHandler(val ctxt: Context, val emergency: Boolean = false) {
+     companion object {
+         private const val TAG = "PHH SipHandler"
+     }
+@@ -454,15 +459,22 @@ class SipHandler(val ctxt: Context) {
+ 
+     fun getVolteNetwork() {
+         // TODO add something similar for VoWifi ipsec tunnel?
+-        Rlog.d(TAG, "Requesting IMS network")
+-        connectivityManager.requestNetwork(NetworkRequest.Builder()
++        Rlog.d(TAG, "Requesting ${if (emergency) "EMERGENCY (EIMS)" else "IMS"} network")
++        val request = if (emergency)
++            NetworkRequest.Builder()
++                .addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
++                .addCapability(NetworkCapabilities.NET_CAPABILITY_EIMS)
++                .removeCapability(NetworkCapabilities.NET_CAPABILITY_NOT_RESTRICTED)
++                .build()
++        else
++            NetworkRequest.Builder()
+             //.addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
+             //.addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
+             //.setNetworkSpecifier(subId.toString())
+             .addCapability(NetworkCapabilities.NET_CAPABILITY_IMS)
+             //.addCapability(NetworkCapabilities.NET_CAPABILITY_MMTEL)
+-            .build(),
+-            object : ConnectivityManager.NetworkCallback() {
++            .build()
++        networkCallback = object : ConnectivityManager.NetworkCallback() {
+                 override fun onUnavailable() {
+                     Rlog.d(TAG, "IMS network unavailable")
+                 }
+@@ -499,7 +511,7 @@ class SipHandler(val ctxt: Context) {
+                 }
+ 
+                 override fun onAvailable(_network: Network) {
+-                    Rlog.d(TAG, "Got IMS network.")
++                    Rlog.d(TAG, "Got ${if (emergency) "EMERGENCY" else "IMS"} network.")
+                     if (!this@SipHandler::network.isInitialized) {
+                         network = _network
+                         thread {
+@@ -511,7 +523,26 @@ class SipHandler(val ctxt: Context) {
+                     }
+                 }
+             }
+-        )
++        connectivityManager.requestNetwork(request, networkCallback!!)
++    }
++
++    private var networkCallback: ConnectivityManager.NetworkCallback? = null
++    @Volatile private var deregistering = false
++
++    /** Emergency instance: REGISTER with Expires 0 over the protected connection. */
++    fun deregister() {
++        deregistering = true
++        register(expires = 0)
++    }
++
++    /** Emergency instance: close sockets and release the EIMS network request. */
++    fun shutdown() {
++        try { socket.close() } catch (t: Throwable) {}
++        try { serverSocket.serverSocket.close() } catch (t: Throwable) {}
++        try { serverSocketUdp.socket.close() } catch (t: Throwable) {}
++        networkCallback?.let { try { connectivityManager.unregisterNetworkCallback(it) } catch (t: Throwable) {} }
++        networkCallback = null
++        Rlog.d(TAG, "SipHandler shut down (emergency=$emergency)")
+     }
+ 
+     fun updateCommonHeaders(socket: SipConnection) {
+@@ -523,7 +554,10 @@ class SipHandler(val ctxt: Context) {
+ 
+         val sipInstance = "<urn:gsma:imei:${imei.substring(0,8)}-${imei.substring(8,14)}-0>"
+         val transport = if (socket is SipConnectionTcp) "tcp" else "udp"
+-        contact =
++        contact = if (emergency)
++            // TS 24.229 5.1.6.2: emergency registration carries the "sos" SIP URI parameter
++            """<sip:$imsi@$local;transport=$transport;sos>;expires=600000;+sip.instance="$sipInstance";+g.3gpp.icsi-ref="urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel";audio"""
++        else
+             """<sip:$imsi@$local;transport=$transport>;expires=600000;+sip.instance="$sipInstance";+g.3gpp.icsi-ref="urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel";+g.3gpp.smsip;audio"""
+         val newHeaders =
+             (if(socket is SipConnectionTcp) {
+@@ -553,7 +587,7 @@ class SipHandler(val ctxt: Context) {
+     }
+ 
+     @SuppressLint("MissingPermission")
+-    fun register(_writer: OutputStream? = null) {
++    fun register(_writer: OutputStream? = null, expires: Int = 600000) {
+         val tm = ctxt.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
+ 
+         val cellInfoList = tm.getAllCellInfo()
+@@ -605,9 +639,9 @@ class SipHandler(val ctxt: Context) {
+                 //"sip:lte-lguplus.co.kr",
+                 registerHeaders +
+                     """
+-                    Expires: 600000
++                    Expires: $expires
+                     Cseq: $registerCounter REGISTER
+-                    Contact: $contact
++                    Contact: ${contact.replace(";expires=600000", ";expires=$expires")}
+                     Supported: path, gruu, sec-agree
+                     Allow: INVITE, ACK, CANCEL, BYE, UPDATE, REFER, NOTIFY, MESSAGE, PRACK, OPTIONS
+                     Authorization: $akaDigest
+@@ -623,6 +657,10 @@ class SipHandler(val ctxt: Context) {
+     }
+ 
+     fun registerCallback(response: SipResponse): Boolean {
++        if (deregistering) {
++            Rlog.d(TAG, "De-REGISTER answered ${response.statusCode} (emergency=$emergency)")
++            return true
++        }
+         // once we get there all register must be successful
+         // on failure just abort thread, ims will restart
+         require(response.statusCode == 200)
+@@ -652,7 +690,13 @@ class SipHandler(val ctxt: Context) {
+                 "to" to listOf("<$mySip>"),
+             )
+ 
+-        subscribe()
++        if (emergency) {
++            // TS 24.229: no reg-event subscription for an emergency registration
++            Rlog.d(TAG, "Emergency registration OK: $mySip")
++            if (!imsReady) { imsReady = true; imsReadyCallback?.invoke() }
++        } else {
++            subscribe()
++        }
+         // always keep callback
+         return false
+     }
+-- 
+2.55.0
+

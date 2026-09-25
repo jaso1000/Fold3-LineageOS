@@ -36,7 +36,12 @@ private data class smsHeaders(
     val cseq: String,
 )
 
-class SipHandler(val ctxt: Context) {
+/**
+ * @param emergency IMS emergency (SOS) instance, per 3GPP TS 24.229 5.1.6: uses the emergency PDN
+ * (NET_CAPABILITY_EIMS) and its P-CSCF, registers with the "sos" Contact parameter, doesn't subscribe
+ * to the reg event package and never reports registration to Android.
+ */
+class SipHandler(val ctxt: Context, val emergency: Boolean = false) {
     companion object {
         private const val TAG = "PHH SipHandler"
     }
@@ -454,15 +459,22 @@ class SipHandler(val ctxt: Context) {
 
     fun getVolteNetwork() {
         // TODO add something similar for VoWifi ipsec tunnel?
-        Rlog.d(TAG, "Requesting IMS network")
-        connectivityManager.requestNetwork(NetworkRequest.Builder()
+        Rlog.d(TAG, "Requesting ${if (emergency) "EMERGENCY (EIMS)" else "IMS"} network")
+        val request = if (emergency)
+            NetworkRequest.Builder()
+                .addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
+                .addCapability(NetworkCapabilities.NET_CAPABILITY_EIMS)
+                .removeCapability(NetworkCapabilities.NET_CAPABILITY_NOT_RESTRICTED)
+                .build()
+        else
+            NetworkRequest.Builder()
             //.addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
             //.addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
             //.setNetworkSpecifier(subId.toString())
             .addCapability(NetworkCapabilities.NET_CAPABILITY_IMS)
             //.addCapability(NetworkCapabilities.NET_CAPABILITY_MMTEL)
-            .build(),
-            object : ConnectivityManager.NetworkCallback() {
+            .build()
+        networkCallback = object : ConnectivityManager.NetworkCallback() {
                 override fun onUnavailable() {
                     Rlog.d(TAG, "IMS network unavailable")
                 }
@@ -499,7 +511,7 @@ class SipHandler(val ctxt: Context) {
                 }
 
                 override fun onAvailable(_network: Network) {
-                    Rlog.d(TAG, "Got IMS network.")
+                    Rlog.d(TAG, "Got ${if (emergency) "EMERGENCY" else "IMS"} network.")
                     if (!this@SipHandler::network.isInitialized) {
                         network = _network
                         thread {
@@ -511,7 +523,26 @@ class SipHandler(val ctxt: Context) {
                     }
                 }
             }
-        )
+        connectivityManager.requestNetwork(request, networkCallback!!)
+    }
+
+    private var networkCallback: ConnectivityManager.NetworkCallback? = null
+    @Volatile private var deregistering = false
+
+    /** Emergency instance: REGISTER with Expires 0 over the protected connection. */
+    fun deregister() {
+        deregistering = true
+        register(expires = 0)
+    }
+
+    /** Emergency instance: close sockets and release the EIMS network request. */
+    fun shutdown() {
+        try { socket.close() } catch (t: Throwable) {}
+        try { serverSocket.serverSocket.close() } catch (t: Throwable) {}
+        try { serverSocketUdp.socket.close() } catch (t: Throwable) {}
+        networkCallback?.let { try { connectivityManager.unregisterNetworkCallback(it) } catch (t: Throwable) {} }
+        networkCallback = null
+        Rlog.d(TAG, "SipHandler shut down (emergency=$emergency)")
     }
 
     fun updateCommonHeaders(socket: SipConnection) {
@@ -523,7 +554,10 @@ class SipHandler(val ctxt: Context) {
 
         val sipInstance = "<urn:gsma:imei:${imei.substring(0,8)}-${imei.substring(8,14)}-0>"
         val transport = if (socket is SipConnectionTcp) "tcp" else "udp"
-        contact =
+        contact = if (emergency)
+            // TS 24.229 5.1.6.2: emergency registration carries the "sos" SIP URI parameter
+            """<sip:$imsi@$local;transport=$transport;sos>;expires=600000;+sip.instance="$sipInstance";+g.3gpp.icsi-ref="urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel";audio"""
+        else
             """<sip:$imsi@$local;transport=$transport>;expires=600000;+sip.instance="$sipInstance";+g.3gpp.icsi-ref="urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel";+g.3gpp.smsip;audio"""
         val newHeaders =
             (if(socket is SipConnectionTcp) {
@@ -553,7 +587,7 @@ class SipHandler(val ctxt: Context) {
     }
 
     @SuppressLint("MissingPermission")
-    fun register(_writer: OutputStream? = null) {
+    fun register(_writer: OutputStream? = null, expires: Int = 600000) {
         val tm = ctxt.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
 
         val cellInfoList = tm.getAllCellInfo()
@@ -605,9 +639,9 @@ class SipHandler(val ctxt: Context) {
                 //"sip:lte-lguplus.co.kr",
                 registerHeaders +
                     """
-                    Expires: 600000
+                    Expires: $expires
                     Cseq: $registerCounter REGISTER
-                    Contact: $contact
+                    Contact: ${contact.replace(";expires=600000", ";expires=$expires")}
                     Supported: path, gruu, sec-agree
                     Allow: INVITE, ACK, CANCEL, BYE, UPDATE, REFER, NOTIFY, MESSAGE, PRACK, OPTIONS
                     Authorization: $akaDigest
@@ -623,6 +657,10 @@ class SipHandler(val ctxt: Context) {
     }
 
     fun registerCallback(response: SipResponse): Boolean {
+        if (deregistering) {
+            Rlog.d(TAG, "De-REGISTER answered ${response.statusCode} (emergency=$emergency)")
+            return true
+        }
         // once we get there all register must be successful
         // on failure just abort thread, ims will restart
         require(response.statusCode == 200)
@@ -652,7 +690,13 @@ class SipHandler(val ctxt: Context) {
                 "to" to listOf("<$mySip>"),
             )
 
-        subscribe()
+        if (emergency) {
+            // TS 24.229: no reg-event subscription for an emergency registration
+            Rlog.d(TAG, "Emergency registration OK: $mySip")
+            if (!imsReady) { imsReady = true; imsReadyCallback?.invoke() }
+        } else {
+            subscribe()
+        }
         // always keep callback
         return false
     }

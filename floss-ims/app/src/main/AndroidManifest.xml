@@ -51,6 +51,10 @@
             <action android:name="android.telephony.ims.ImsService" />
         </intent-filter>
       </service>
+      <!-- Test-only emergency hooks (never place a call); shell/root only via DUMP -->
+      <receiver android:name=".EmergencyTestReceiver"
+          android:exported="true"
+          android:permission="android.permission.DUMP" />
       <!--<receiver android:name=".AlarmBroadcastReceiver"
       android:exported="false" />-->
       <!--android:enabled="true"-->

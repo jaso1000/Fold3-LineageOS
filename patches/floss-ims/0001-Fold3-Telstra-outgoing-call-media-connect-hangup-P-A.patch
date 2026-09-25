@@ -1,7 +1,7 @@
 From 786e2d886c8cb9016b237a3a476fed62708b2b48 Mon Sep 17 00:00:00 2001
 From: Jason Walker <59085866+jaso1000@users.noreply.github.com>
 Date: Thu, 24 Sep 2026 20:55:20 +1000
-Subject: [PATCH 1/6] Fold3/Telstra: outgoing call media+connect+hangup, P-ANI
+Subject: [PATCH 1/7] Fold3/Telstra: outgoing call media+connect+hangup, P-ANI
  in REGISTER, priv-app manifest
 
 - Start RTP threads and report callSessionInitiated when the INVITE is answered

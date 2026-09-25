@@ -1,7 +1,7 @@
 From 12855aacb637c6897bb499e1a4ba6c50522f0d98 Mon Sep 17 00:00:00 2001
 From: Jason Walker <59085866+jaso1000@users.noreply.github.com>
 Date: Thu, 24 Sep 2026 21:08:53 +1000
-Subject: [PATCH 6/6] Fix outgoing SMS stuck on Sending
+Subject: [PATCH 6/7] Fix outgoing SMS stuck on Sending
 
 The framework passes the SIM SMSC as a hex SM-RP address (07 81 ...), which isn't a
 dialable number, so we fell through to getSmscIdentity (null on Telstra) and then crashed
