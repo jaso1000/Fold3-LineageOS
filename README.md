@@ -50,7 +50,7 @@ Don't `ctl.restart ril-daemon` to fix a slow phone start — it breaks the finge
 - ✅ Incoming calls: ring, caller ID, answer, audio both ways, hang up from either side
 - ✅ Incoming call with screen off / locked; decline; missed-call log
 - ☐ Calls still work after 1–2+ h idle (re-registration fix)
-- ⚠️ **Emergency calls (000/112): treat as NOT working.** Android routes 000 to VoLTE (Floss), but Floss has no emergency support (no emergency PDN, emergency registration or `urn:service:sos`). It goes out as a normal call, and whether Telstra connects it can't be tested safely. There's no 3G fallback in Australia. **Keep a stock phone for emergencies.** A fix is in progress (see notes/procedure.md).
+- ⚠️ **Emergency calls (000/112): treat as NOT working.** Android routes 000 to VoLTE (Floss), but Floss has no emergency support (no emergency PDN, emergency registration or `urn:service:sos`). It goes out as a normal call, and whether Telstra connects it can't be tested safely. There's no 3G fallback in Australia. **Keep a stock phone for emergencies.** Groundwork done and verified (emergency PDN + emergency registration); the emergency call itself (INVITE `urn:service:sos`) isn't written yet (paused; see notes/procedure.md).
 - ☐ Call waiting, hold/swap, merge into conference
 - ☐ Voicemail notification (new-voicemail indicator)
 - ☐ Wi-Fi calling (likely unsupported by Floss)

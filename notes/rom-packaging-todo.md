@@ -50,8 +50,10 @@ currently delivered via Magisk that must be baked in. See notes/procedure.md for
       enrollment). Fix it in the HIDL fingerprint provider (HidlToAidlSessionAdapter).
 
 ## Floss IMS for other carriers
-- [ ] Emergency calls over IMS (emergency PDN/APN, SOS URN, emergency registration). Verify
-      without dialling 000 (logs/code), then fix if missing.
+- [ ] Emergency calls over IMS: EIMS PDN + emergency REGISTER done and verified (Floss patch 0007).
+      Remaining: INVITE `urn:service:sos[.type]` with P-Access-Network-Info on the emergency
+      registration, wired to SERVICE_TYPE_EMERGENCY; fallback to the normal registration; 380
+      handling. Never test by dialling 000. Paused 2026-09-25.
 - [ ] Call waiting / hold / conference, voicemail MWI, USSD over IMS, Wi-Fi calling (ePDG)
 - [ ] Precondition fallback: offer QoS preconditions, retry without on 400/420/421 (Telstra rejects them)
 - [ ] Test on other carriers (Optus, Vodafone AU, overseas)
