@@ -232,8 +232,9 @@ BiTGApps Core doesn't pre-grant GSF: `pm grant com.google.android.gsf android.pe
   `config_dozeAfterScreenOffByDefault`, as in samsung-sm8350). HWC/panel doze works on both panels.
 - AOD brightness: the GSI's `config_screenBrightnessDoze` = 1/255 (float 0.0) put the inner panel
   at 2/510 (barely visible). The RRO sets 38 / 0.15 (inner reads 78/510 in AOD). The outer panel's
-  brightness helper uses the same 0.15 while `dumpsys display` shows `mPowerRequest=policy=DOZE`,
-  instead of copying the normal brightness.
+  brightness helper uses its own, dimmer value while `dumpsys display` shows
+  `mPowerRequest=policy=DOZE`, instead of copying the normal brightness: 0.10 (51/510) by default
+  since v9, tunable live with `setprop persist.fold3.outer_aod <0.02-1.0>` (applies next AOD).
 
 ### USB-C dock / desktop mode — module `fold3-desktop`
 - **Symptom**: the dock only charges. No keyboard, mouse or hub, no monitor. Once USB worked, the monitor

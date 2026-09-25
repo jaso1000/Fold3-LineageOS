@@ -23,7 +23,10 @@ until [ "$(getprop sys.boot_completed)" = "1" ]; do sleep 1; done
     done
 ) &
 
-DOZE=0.15   # AOD brightness, matches config_screenBrightnessDozeFloat in the overlay
+# Outer panel AOD brightness. The inner panel's comes from config_screenBrightnessDozeFloat (0.15)
+# in the overlay; the outer one is set here and runs dimmer. Tune without reinstalling:
+# `setprop persist.fold3.outer_aod 0.08` (0.02-1.0), picked up the next time AOD starts.
+DOZE_DEFAULT=0.10
 INNER=/sys/class/backlight/panel0-backlight/brightness
 OUTER=/sys/class/backlight/panel1-backlight/brightness
 last=-1
@@ -35,6 +38,8 @@ while true; do
         # While the slider is being dragged SystemUI only sets a temporary brightness, which
         # get-brightness doesn't report; DisplayPowerController's dump does.
         # In AOD (power request policy DOZE) use the doze brightness, not the slider's.
+        DOZE=$(getprop persist.fold3.outer_aod)
+        case "$DOZE" in 0.0[2-9]*|0.[1-9]*|1|1.0) ;; *) DOZE=$DOZE_DEFAULT ;; esac
         f=$(dumpsys display 2>/dev/null | awk -F: -v doze="$DOZE" '
             /mPowerRequest=policy=DOZE/ { print doze; exit }
             /mTemporaryScreenBrightness:/ { v = $2 + 0; if ($2 !~ /NaN/ && v >= 0 && v <= 1) { print v; exit } }')

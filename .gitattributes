@@ -1,0 +1,3 @@
+# Keep LF everywhere (shell scripts and props run on Android), even on a Windows checkout
+* text=auto eol=lf
+*.bat text eol=crlf
