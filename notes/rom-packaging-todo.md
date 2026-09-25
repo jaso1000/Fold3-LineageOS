@@ -98,7 +98,7 @@ currently delivered via Magisk that must be baked in. See notes/procedure.md for
 - [ ] Auto-brightness + double tap to wake (RRO values) and DT2W: set `aot_enable` from the power HAL's DOUBLE_TAP_TO_WAKE mode (or an init/settings trigger) instead of the polling helper
 - [ ] Always-on display: bake in the doze RRO values + AOD brightness 0.15 (inner) / 0.10 (outer, `persist.fold3.outer_aod`); give the outer panel proper doze brightness in the framework instead of the helper
 - [ ] Outer display brightness: lights HAL/framework path for the second panel (currently a polling helper writing panel1-backlight)
-- [ ] Adaptive refresh rate: make it ramp to 120 Hz on interaction (DisplayModeDirector / peak refresh config, touch boost) instead of forcing min = 120 Hz
+- [ ] Adaptive refresh rate (decided 2026-09-26: ship as an opt-in quirk, Minimum refresh rate = 120 Hz). Not SurfaceFlinger props: content detection + 200 ms touch timer are already the defaults. If revisited, look at DisplayModeDirector votes / Samsung panel modes (48/96/120 Hz VRR/LFD)
 - [ ] Cameras: set `persist.sys.phh.samsung.camera_ids=true` (or LineageOS samsung camera provider with `EXTRA_IDS`) and ship the Aperture aux-camera overlay
 - [ ] USB-C dock/desktop: port the fold3-desktop logic into the framework (UsbHostRestrictor-like keyguard listener instead of polling; host re-plug on unlock), default the desktop-experience flags on, and handle the external display "mirror or extend" prompt properly
 - [ ] USB-C audio: make audioserver load Samsung's `audio_policy_configuration_sec.xml` (or merge its primary USB ports) instead of the bind mount

@@ -27,9 +27,21 @@ bash ~/Projects/Fold3-LineageOS/rom/apply.sh .    # ours (re-runnable)
 | `pm disable …SafetySourceReceiver` | `fold3-boot.sh` |
 | `fold3-android-auto`, GSF permissions | MindTheGapps |
 
-Still manual: IMS APN + `carrier_volte_available` (per SIM). Still to do in the framework:
-signal bars, outer boot logo, adaptive 120 Hz, fingerprint boot race, phone slow start, Play
-Integrity spoof.
+Milestone 3 (framework) fixes, also applied by `apply.sh`:
+
+| Problem | Fix |
+|---|---|
+| Signal bars always 0 | `patches/platform_frameworks_opt_telephony`: `ISehRadio…signalLevelInfoChanged` → SignalStrength (+ `CA_ENABLED=1`) |
+| Fingerprint enrollment lost at boot / after a HAL restart | `patches/platform_frameworks_base`: HIDL adapter sets the active group on every new HAL connection (the boot service still covers rild restarts) |
+| Samsung logo stays on the outer screen | `fold3-boot.sh`: powers off disabled built-in displays once at boot (log: `/data/misc/fold3/boot.log`) |
+
+Still manual: IMS APN + `carrier_volte_available` (per SIM). Not done: phone app slow start (root
+cause), built-in Play Integrity spoof (use PlayIntegrityFork).
+
+**Quirk, opt-in: 120 Hz.** Adaptive refresh doesn't ramp up to 120 Hz on its own on this phone
+(SurfaceFlinger's defaults already use content detection and a 200 ms touch timer, so the cause is
+elsewhere). If you want it smooth all the time, set Settings → Display → **Minimum refresh rate →
+120 Hz** (costs battery).
 
 Scripts run as root in TrebleDroid's `phhsu_daemon` domain (like `rw-system.sh`) and exit at once
 unless `ro.product.vendor.model` is `SM-F926*`. The module scripts in `magisk-src/` stay the single
