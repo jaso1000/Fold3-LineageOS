@@ -34,3 +34,10 @@ PRODUCT_SYSTEM_PROPERTIES += \
     persist.sys.phh.samsung.camera_ids=true \
     persist.sys.phh.ims.floss=true \
     persist.wm.debug.desktop_experience_devopts=1
+
+# Adaptive refresh rate: Samsung's vendor sets no SurfaceFlinger touch/idle policy (One UI does
+# it in its own framework), so the GSI never went up to 120 Hz on touch. Same values as other
+# SM8350 trees: pick the rate from content, boost to the peak rate on touch for 200 ms.
+PRODUCT_PRODUCT_PROPERTIES += \
+    ro.surface_flinger.use_content_detection_for_refresh_rate=true \
+    ro.surface_flinger.set_touch_timer_ms=200

@@ -1,0 +1,70 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Jason Walker <59085866+jaso1000@users.noreply.github.com>
+Date: Sat, 26 Sep 2026 09:25:52 +1000
+Subject: [PATCH] fingerprint(HIDL): set the active group on every new HAL
+ connection
+
+Samsung fingerprint HALs (seen on the Galaxy Z Fold3) reject enumerate/auth until setActiveGroup is called on that HAL instance. The HIDL adapter scheduled the internal cleanup as soon as it connected, so at boot or after a HAL restart the cleanup enumerated 0 templates and deleted the enrollment. After serviceDied the next update-active-user client also returned early ("Already user") and never re-sent the group. Send setActiveGroup for the current user right after connecting, and forget the current user when the HAL dies.
+
+Change-Id: Ia9fe05805338e9a6ff64736a7f88cfc08535dcb1
+---
+ .../hidl/HidlToAidlSensorAdapter.java         | 31 +++++++++++++++++++
+ 1 file changed, 31 insertions(+)
+
+diff --git a/services/core/java/com/android/server/biometrics/sensors/fingerprint/hidl/HidlToAidlSensorAdapter.java b/services/core/java/com/android/server/biometrics/sensors/fingerprint/hidl/HidlToAidlSensorAdapter.java
+index d2fc51905..63c930e36 100644
+--- a/services/core/java/com/android/server/biometrics/sensors/fingerprint/hidl/HidlToAidlSensorAdapter.java
++++ b/services/core/java/com/android/server/biometrics/sensors/fingerprint/hidl/HidlToAidlSensorAdapter.java
+@@ -127,6 +127,9 @@ public class HidlToAidlSensorAdapter extends Sensor implements IHwBinder.DeathRe
+         Slog.d(TAG, "Fingerprint HAL died.");
+         mSession = null;
+         mDaemon = null;
++        // The restarted HAL has no active group: make the next update-active-user client
++        // really call setActiveGroup instead of returning "Already user".
++        mCurrentUserId = UserHandle.USER_NULL;
+     }
+ 
+     @Override
+@@ -221,11 +224,39 @@ public class HidlToAidlSensorAdapter extends Sensor implements IHwBinder.DeathRe
+         }
+ 
+         mDaemon.asBinder().linkToDeath(this, 0 /* flags */);
++        restoreActiveGroup();
+         scheduleLoadAuthenticatorIds();
+         mInternalCleanupRunnable.run();
+         return mDaemon;
+     }
+ 
++    /**
++     * Some HALs (Samsung, e.g. Galaxy Z Fold3) reject everything, including the enumerate done by
++     * the internal cleanup, until setActiveGroup has been called on this HAL instance. Without
++     * it, the boot-time cleanup (or the one after a HAL restart) enumerates 0 templates and
++     * deletes the user's enrollment from the framework. Set the group for the current user on
++     * every new HAL connection, before anything else is scheduled.
++     */
++    private void restoreActiveGroup() {
++        final int userId = mCurrentUserId != UserHandle.USER_NULL
++                ? mCurrentUserId : android.app.ActivityManager.getCurrentUser();
++        final java.io.File baseDir =
++                android.os.Build.VERSION.DEVICE_INITIAL_SDK_INT
++                        <= android.os.Build.VERSION_CODES.O_MR1
++                        ? android.os.Environment.getUserSystemDirectory(userId)
++                        : android.os.Environment.getDataVendorDeDirectory(userId);
++        final java.io.File dir = new java.io.File(baseDir, "fpdata");
++        if (!dir.exists()) {
++            return;
++        }
++        try {
++            final int result = mDaemon.setActiveGroup(userId, dir.getAbsolutePath());
++            Slog.d(TAG, "Restored active group " + userId + " on new HAL connection: " + result);
++        } catch (RemoteException e) {
++            Slog.e(TAG, "Failed to restore active group", e);
++        }
++    }
++
+     private UserSwitchProvider<ISession, AidlSession> getUserSwitchProvider() {
+         return new UserSwitchProvider<>() {
+             @NonNull
+-- 
+2.43.0
+

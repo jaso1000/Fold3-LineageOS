@@ -1,0 +1,117 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Jason Walker <59085866+jaso1000@users.noreply.github.com>
+Date: Sat, 26 Sep 2026 09:23:58 +1000
+Subject: [PATCH] Samsung RIL: turn ISehRadio signalLevelInfoChanged into
+ signal strength
+
+Samsung RILs (seen on the Galaxy Z Fold3, SM-F926B) never fill the standard signal strength indication, so the status bar always showed 0 bars. They report bars only through ISehRadioIndication.signalLevelInfoChanged, which was just logged. Build an LTE SignalStrength from the highest reported level (RSRP in the middle of the default bucket for it) and deliver it through the RIL signal strength registrant, like currentSignalStrength. Also send CA_ENABLED=1 with FW_READY=1.
+
+Change-Id: I8f7d679eab0c2d0586c1cab1fa3f47c3b9ae0be4
+---
+ .../com/android/internal/telephony/RIL.java   |  1 +
+ .../internal/telephony/RadioNetworkProxy.java | 41 ++++++++++++++++++-
+ .../internal/telephony/RadioServiceProxy.java |  5 +++
+ 3 files changed, 45 insertions(+), 2 deletions(-)
+
+diff --git a/src/java/com/android/internal/telephony/RIL.java b/src/java/com/android/internal/telephony/RIL.java
+index f5486be..3eed76b 100644
+--- a/src/java/com/android/internal/telephony/RIL.java
++++ b/src/java/com/android/internal/telephony/RIL.java
+@@ -804,6 +804,7 @@ public class RIL extends BaseCommands implements CommandsInterface {
+             } else {
+                 IBinder binder;
+                 serviceProxy.setServiceName(HIDL_SERVICE_NAME[mPhoneId]);
++                serviceProxy.setRil(this);
+                 switch (service) {
+                     case HAL_SERVICE_DATA:
+                         if (mMockModem == null) {
+diff --git a/src/java/com/android/internal/telephony/RadioNetworkProxy.java b/src/java/com/android/internal/telephony/RadioNetworkProxy.java
+index 93d4c81..162ba5f 100644
+--- a/src/java/com/android/internal/telephony/RadioNetworkProxy.java
++++ b/src/java/com/android/internal/telephony/RadioNetworkProxy.java
+@@ -151,7 +151,9 @@ public class RadioNetworkProxy extends RadioServiceProxy {
+                     l("roamingNetworkScanIsRequested");
+                 }
+                 public void signalLevelInfoChanged(int type, SehSignalBar signalBarInfo) {
+-                    l("signalLevelInfoChanged " + signalBarInfo);
++                    deliverSehSignalLevel(Math.max(
++                            Math.max(signalBarInfo.lteLevel, signalBarInfo.nrLevel),
++                            Math.max(signalBarInfo.wcdmaLevel, signalBarInfo.gsmLevel)));
+                 }
+                 public void vendorConfigurationChanged(int type, SehVendorConfiguration[] configurations) {
+                     l("vendorConfigurationChanged:");
+@@ -762,6 +764,33 @@ public class RadioNetworkProxy extends RadioServiceProxy {
+         }
+     }
+ 
++    // Samsung RILs (e.g. Galaxy Z Fold3) never fill the standard signal strength indication and
++    // only report bars through ISehRadio(Network)Indication.signalLevelInfoChanged. Turn the
++    // highest reported level (0-4) into an LTE SignalStrength whose RSRP sits in the middle of
++    // the default AOSP bucket for that level, and deliver it like currentSignalStrength.
++    private static final int[] SEH_RSRP_FOR_LEVEL = {-120, -110, -100, -90, -80};
++
++    private void deliverSehSignalLevel(int level) {
++        RIL ril = mRil;
++        if (ril == null || level < 0) return;
++        level = Math.min(4, level);
++        android.telephony.CellSignalStrengthLte lte = new android.telephony.CellSignalStrengthLte(
++                android.telephony.CellInfo.UNAVAILABLE, SEH_RSRP_FOR_LEVEL[level], -10, 100,
++                android.telephony.CellInfo.UNAVAILABLE, android.telephony.CellInfo.UNAVAILABLE,
++                android.telephony.CellInfo.UNAVAILABLE);
++        android.telephony.SignalStrength ss = new android.telephony.SignalStrength(
++                new android.telephony.CellSignalStrengthCdma(),
++                new android.telephony.CellSignalStrengthGsm(),
++                new android.telephony.CellSignalStrengthWcdma(),
++                new android.telephony.CellSignalStrengthTdscdma(),
++                lte,
++                new android.telephony.CellSignalStrengthNr());
++        if (ril.mSignalStrengthRegistrant != null) {
++            ril.mSignalStrengthRegistrant.notifyRegistrant(
++                    new android.os.AsyncResult(null, ss, null));
++        }
++    }
++
+     @Override
+     public void setHidl(HalVersion halVersion, android.hardware.radio.V1_4.IRadio radio) {
+         super.setHidl(halVersion, radio);
+@@ -845,7 +874,11 @@ public void setVendorSpecificConfigurationResponse(RadioResponseInfo info) {}
+                     return -1;
+                 }
+                 public void execute(int type, String cmd) { l("execute " + cmd); }
+-                public void signalLevelInfoChanged(int type, vendor.samsung.hardware.radio.V2_0.SehSignalBar signalBarInfo) { l("signalLevelInfoChanged"); }
++                public void signalLevelInfoChanged(int type, vendor.samsung.hardware.radio.V2_0.SehSignalBar signalBarInfo) {
++                    deliverSehSignalLevel(Math.max(
++                            Math.max(signalBarInfo.lteLevel, signalBarInfo.nrLevel),
++                            Math.max(signalBarInfo.wcdmaLevel, signalBarInfo.gsmLevel)));
++                }
+                 public void extendedRegistrationState(int type, vendor.samsung.hardware.radio.V2_0.SehExtendedRegStateResult state) { l("extendedRegistrationState"); }
+                 public void needPacketUsage(String iface, needPacketUsageCallback hidl_cb) {
+                     hidl_cb.onValues(0, new vendor.samsung.hardware.radio.V2_0.SehPacketUsage());
+@@ -865,6 +898,10 @@ public void setVendorSpecificConfigurationResponse(RadioResponseInfo info) {}
+             arg.name = "FW_READY";
+             arg.value = "1";
+             args.add(arg);
++            var ca = new vendor.samsung.hardware.radio.V2_2.SehVendorConfiguration();
++            ca.name = "CA_ENABLED";
++            ca.value = "1";
++            args.add(ca);
+ 
+             svc.setVendorSpecificConfiguration(0x3232, args);
+             android.util.Log.e("PHH-Radio", "HIDL FW_READY done");
+diff --git a/src/java/com/android/internal/telephony/RadioServiceProxy.java b/src/java/com/android/internal/telephony/RadioServiceProxy.java
+index fa02d52..3caf8dd 100644
+--- a/src/java/com/android/internal/telephony/RadioServiceProxy.java
++++ b/src/java/com/android/internal/telephony/RadioServiceProxy.java
+@@ -88,4 +88,9 @@ public abstract class RadioServiceProxy {
+     public void setServiceName(String serviceName) {
+         mServiceName = serviceName;
+     }
++
++    protected RIL mRil = null;
++    public void setRil(RIL ril) {
++        mRil = ril;
++    }
+ }
+-- 
+2.43.0
+
