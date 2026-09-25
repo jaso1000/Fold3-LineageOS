@@ -242,6 +242,18 @@ then deletes the enrolled fingerprint. Kept in `magisk-src/`, disabled on the ph
 
 ## Known issues
 
+- **Emergency calls (analysed 2026-09-25, no call placed)**: 000 is in the emergency number list
+  (db, au). Carrier config for 505-01: `carrier_use_ims_first_for_emergency_bool=true`,
+  emergency over IMS on EUTRAN, domain preference [PS, CS, ...]. The GSI has no OEM domain
+  selection service (`useOemDomainSelectionService=true`, none present), so the legacy path
+  sends 000 to ImsPhone, i.e. Floss. Floss ignores `SERVICE_TYPE_EMERGENCY` and sends a normal INVITE
+  to `tel:000;phone-context=...` on the normal registration: no EIMS PDN, no emergency
+  REGISTER (`sos` Contact parameter), no `urn:service:sos`. It then depends on whether Telstra's P-CSCF
+  routes a non-UE-detected emergency call or rejects it (380 Alternative Service). The CS retry
+  has no 3G in Australia. The network advertises emergency bearer support (`mEmcBearerSupport = 1`).
+  Plan: EIMS PDN, then emergency REGISTER, then INVITE `urn:service:sos[.police|.ambulance|.fire]`,
+  plus correct failure codes on 380. Test PDN + REGISTER only; **never dial 000 to test**.
+
 - **Signal bars 0**: Samsung rild never fills the standard signal indication (the framework's
   SignalStrengthController receives nothing; `GET_CELL_INFO_LIST` fails with error 63; cell info
   only arrives twice at boot). It reports bars **only** through Samsung's HIDL
