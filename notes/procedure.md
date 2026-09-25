@@ -252,9 +252,17 @@ BiTGApps Core doesn't pre-grant GSF: `pm grant com.google.android.gsf android.pe
   `force_desktop_mode_on_external_displays=1`, and developer option **Enable desktop experience features**
   (`override_desktop_experience_features=1` plus `persist.wm.debug.desktop_experience_devopts=1`,
   read at boot).
-- **Fix**: the module sets the prop in post-fs-data; service.sh keeps `usb_sl=SUNNY_WORK_MODE` and the
-  settings, and runs `cmd display enable-display <id>` for disabled HDMI/DP displays.
-  Trade-off: no lock-screen USB blocking (AOSP behaviour).
+- **Fix**: the module sets the prop in post-fs-data. service.sh re-applies the settings, runs
+  `cmd display enable-display <id>` for disabled HDMI/DP displays, and drives `usb_sl` with stock's
+  rules (decompiled from One UI services.jar `UsbHostRestrictor`): `deviceLocked` from `dumpsys trust`
+  (only true with a secure lock screen) gives `RAINY_RESTRICT_MODE`, or `CLOUDY_WORK_MODE` if
+  Settings.Secure `block_usb_lock=0` (stock default 1); unlocked gives `SUNNY_WORK_MODE`. Stock's post-lock
+  timer and MDM/SIM/DeX policy hooks are omitted.
+- **Unlock after plugging in while locked**: in RAINY the host starts but new devices get
+  `authorized=0` (the dock's hubs). On unlock the driver only re-enumerates when there's no hub and no PD
+  contract, and re-authorizing fails (`no configuration chosen`, the allowlist still refuses). So the
+  helper does a software re-plug: `echo ON_HOST_REPLUG > usb_control/disable; echo OFF > ...`, and DP stays
+  up. Reading `usb_sl` logs a kernel line each time, so the helper caches its last write.
 
 ### Disabled: `fold3-boot-splash`
 Flipping device state CLOSE→reset at boot cleared the outer-screen boot logo but kills Samsung's

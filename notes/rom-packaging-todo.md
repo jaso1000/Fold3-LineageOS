@@ -70,5 +70,5 @@ currently delivered via Magisk that must be baked in. See notes/procedure.md for
 - [ ] Outer display brightness: lights HAL/framework path for the second panel (currently a polling helper writing panel1-backlight)
 - [ ] Adaptive refresh rate: make it ramp to 120 Hz on interaction (DisplayModeDirector / peak refresh config, touch boost) instead of forcing min = 120 Hz
 - [ ] Cameras: set `persist.sys.phh.samsung.camera_ids=true` (or LineageOS samsung camera provider with `EXTRA_IDS`) and ship the Aperture aux-camera overlay
-- [ ] USB-C dock/desktop: write usb_sl from the framework (follow keyguard: SUNNY/CLOUDY), default the desktop-experience flags on, and handle the external display "mirror or extend" prompt properly
+- [ ] USB-C dock/desktop: port the fold3-desktop logic into the framework (UsbHostRestrictor-like keyguard listener instead of polling; host re-plug on unlock), default the desktop-experience flags on, and handle the external display "mirror or extend" prompt properly
 - [ ] Play Integrity: built-in certified-props spoof (PIHooks/PixelPropsUtils-style, GMS DroidGuard only) so RCS gets BASIC without root; optional user-supplied keybox

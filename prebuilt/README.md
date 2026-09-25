@@ -12,7 +12,7 @@ Install with Magisk (Modules → Install from storage), or
 | `fold3-fingerprint-fix.zip` | v3 | Re-sends `setActiveGroup` to Samsung's fingerprint HAL at boot and on HAL/rild restarts |
 | `fold3-floss-ims.zip` | v20 | Floss IMS (VoLTE calls/SMS/MMS) built from `../floss-ims`, as a priv-app |
 | `fold3-net-fixes.zip` | v1 | Hotspot DNS fix |
-| `fold3-desktop.zip` | v2 | USB-C docks (USB host + DisplayPort) and Android 16 desktop mode on the external monitor |
+| `fold3-desktop.zip` | v5 | USB-C docks (USB host + DisplayPort) with One UI-style lock-screen USB protection, and Android 16 desktop mode on the external monitor |
 
 **Not included, build it yourself:** `fold3-media-c2-seccomp`. It contains a copy of a Samsung
 vendor file, so `scripts/make-media-c2-seccomp-module.sh` pulls it from your own phone. The
