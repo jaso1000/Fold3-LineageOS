@@ -20,13 +20,20 @@ currently delivered via Magisk that must be baked in. See notes/procedure.md for
   - HDD tuning: shallow sync (`repo init --depth=1`, `repo sync -c --no-tags -j4`), large
     `.wslconfig` memory so the page cache hides seek latency, keep WSL running between builds.
     Expect sync 3–6 h, first build 6–10+ h, incrementals 15–40 min.
-  - Still unknown: desktop RAM and free SSD space → size `.wslconfig` (memory 32–48 GB, most
-    cores, swap 32 GB) and decide on the hybrid layout.
+  - Desktop (checked 2026-09-25): Ryzen 7 5800X (8C/16T), 32 GB RAM, C: = Samsung 980 PRO 1 TB
+    NVMe with ~358 GB free, E: = Seagate 1 TB USB HDD (empty). WSL not installed yet.
+    → `.wslconfig`: memory ~26 GB, 16 processors, swap 32 GB (swap file on C:).
+    → Use the hybrid layout: source on E:, `out/` + ccache in a ~150 GB VHDX on C:.
   - Fallbacks: apply to **Crave.io** (free ROM build servers, invite-only) in parallel; buy a 1 TB
     SSD (~AUD 100–150) if HDD iteration is too slow. Hetzner Cloud doubled its prices in June 2026
     (CCX33 ~€165/mo), so it's no longer a cheap option; cloud spot VMs are the paid fallback.
 - **Identity**: unofficial build name, own release keys (kept out of the repo, backed up), vanilla
   (GApps flashed separately), releases on this repo's GitHub Releases (kept for the ROM).
+- **Root (decided 2026-09-25)**: the ROM ships **without root** and nothing in it depends on
+  Magisk. Development builds are userdebug, so Developer options → Rooted debugging gives `adb root`
+  for logs and testing. Full root stays optional: the ROM only replaces `system`, so a
+  Magisk-patched stock `boot.img` works on top exactly as it does now. RCS gets BASIC integrity
+  from the built-in Play Integrity spoof, not PlayIntegrityFork.
 - **Milestones**
   1. Reproduce the current GSI from source, unchanged; it must boot identically.
   2. Bake in everything under "Must bake in" (no Magisk needed).
