@@ -284,6 +284,14 @@ BiTGApps Core doesn't pre-grant GSF: `pm grant com.google.android.gsf android.pe
 - Unrelated: TrebleDroid's `me.phh.treble.app` crashes in `Desktop.kt:39` (NPE in onInputDeviceAdded)
   when a USB HID device appears. It's harmless and only affects that app.
 
+### Android Auto — module `fold3-android-auto`
+- "Communication error 22 - Android Auto was not preinstalled": since Android 10 Android Auto
+  (`com.google.android.projection.gearhead`) must be a privileged system app. The script copies the
+  installed base+split APKs into `/system/priv-app/AndroidAuto` and writes a privapp-permissions
+  allowlist of every requested permission (`ro.control_privapp_permissions=log` here, so a gap can't
+  bootloop). After a reboot the package shows `SYSTEM UPDATED_SYSTEM_APP` + `PRIVILEGED`, and Play
+  updates install on top.
+
 ### Disabled: `fold3-boot-splash`
 Flipping device state CLOSE→reset at boot cleared the outer-screen boot logo but kills Samsung's
 fingerprint HAL; the restarted HAL never gets `setActiveGroup` → no sensor, and boot cleanup

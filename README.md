@@ -35,6 +35,7 @@ Telstra/Boost** and both screens. Fixes are delivered as small Magisk modules (r
 | No auto-brightness, double tap to wake or always-on display | The GSI ships Samsung SM8350's brightness curve but leaves `config_automatic_brightness_available` off; double-tap isn't wired to the touch drivers | RRO turns on auto-brightness, the double-tap setting and AOD (doze), with AOD brightness raised from 1/255 to 15%; helper sends `aot_enable,<0/1>` to both touch panels (`/sys/class/sec/tsp1`, `tsp2`) following the setting | module `fold3-fold-config` (overlay + `service.sh`) |
 | USB-C dock: only charges (no keyboard/mouse, no monitor), then only mirrors | Samsung's `usb_notify` boots in lock state `SKY_DEFAULT`, which it treats as "restricted", so it refuses USB host (and with it DisplayPort). One UI's UsbHostRestrictor normally writes `SUNNY_WORK_MODE`. Android 16's desktop mode also needs the desktop-experience developer flags | Drive `usb_sl` like One UI's UsbHostRestrictor: unlocked `SUNNY_WORK_MODE`; locked with a secure lock screen `RAINY_RESTRICT_MODE` (new USB devices blocked, already-connected keep working; `block_usb_lock=0` gives `CLOUDY_WORK_MODE`). Re-plug USB host on unlock if something was blocked. Turn on freeform, force desktop mode on external displays, and desktop experience features; enable new external displays | module `fold3-desktop` |
 | USB-C headphones silent (audio stays on the speaker, or goes nowhere) | The GSI loads the vendor's generic `audio_policy_configuration.xml`, which has no USB routing. With Qualcomm USB offload on, only the primary HAL's DSP path can play to a USB headset. One UI uses Samsung's `audio_policy_configuration_sec.xml` | Bind-mount Samsung's `_sec` policy over the default at boot | module `fold3-usb-audio` |
+| Android Auto: "Communication error 22 - not preinstalled" | Since Android 10 Android Auto must be a privileged system app; BiTGApps Core doesn't ship it | Put the Play Store install into `/system/priv-app` with a privapp-permissions allowlist (Play updates still apply on top) | module `fold3-android-auto`, built from your own phone with `scripts/make-android-auto-module.sh` (Google's APK isn't in the repo) |
 | Fingerprint sensor stops detecting / enrollment lost | Samsung HAL loses its active user after boot and after every rild restart; Android only sends `setActiveGroup` once | Re-send `setActiveGroup` the moment the HAL starts (before system_server touches it), on every HAL restart, and after rild restarts | module `fold3-fingerprint-fix` (`tools/fp-active-group/`) |
 
 Disabled: `fold3-boot-splash` (cleared the outer-screen boot logo but killed the fingerprint HAL).
@@ -102,7 +103,7 @@ Don't `ctl.restart ril-daemon` to fix a slow phone start — it breaks the finge
 - ✅ Google sign-in, Play Store installs (Messages, YouTube)
 - ✅ Play Integrity: BASIC (with PlayIntegrityFork); DEVICE/STRONG not expected with an unlocked bootloader
 - ✅ Several reboots in a row: network, fingerprint and modules come back each time
-- ☐ Android Auto (installed, not yet tried in the car)
+- ☐ Android Auto in the car (now a system app; "error 22" fixed, car test pending)
 - ✅ Overnight battery drain: about the same as stock
 - ☐ A full day of normal use without crashes or lost network
 - ☐ Alarms fire while locked / in Doze
@@ -175,7 +176,8 @@ replaces `/vendor/etc/devicestate/device_state_configuration.xml` with Samsung's
    app once. (A boot.img from any other firmware version fails Samsung's "Secure check".)
 2. Install this repo's Magisk modules: the zips in [`prebuilt/`](prebuilt/) (or rebuild them with
    `scripts/make-*-module.sh`), plus `fold3-media-c2-seccomp`, which you build from your own phone
-   with `scripts/make-media-c2-seccomp-module.sh`. Then do the manual steps listed in the table (GSF permissions, IMS APN +
+   with `scripts/make-media-c2-seccomp-module.sh`, and (for Android Auto, after installing it from Play)
+   `fold3-android-auto` via `scripts/make-android-auto-module.sh`. Then do the manual steps listed in the table (GSF permissions, IMS APN +
    `carrier_volte_available`, disabling `SafetySourceReceiver`).
 3. Calls: the Floss IMS module + carrier setup in
    [notes/procedure.md](notes/procedure.md#volte-calls--module-fold3-floss-ims--manual-carrier-setup).
