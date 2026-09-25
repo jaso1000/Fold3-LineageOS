@@ -32,7 +32,7 @@ Telstra/Boost** and both screens. Fixes are delivered as small Magisk modules (r
 | Cover-screen selfie camera shows the inner camera; no Flex mode in apps | GSI has no folded/open device-state config, so camera HAL never told "folded" | Framework RRO with fold states, postures and hinge feature (`config_display_features` is a plain string, not an array) | module `fold3-fold-config` (`overlays/Fold3FrameworkOverlay`) |
 | Only main camera usable; no ultra-wide / telephoto | Samsung's camera provider hides aux lenses from `getCameraIdList`; Aperture has aux cameras disabled | `persist.sys.phh.samsung.camera_ids=true` (GSI asks via `sehGetCameraIdList`) + Aperture RRO enabling aux cameras, ignoring logical/duplicate ids | module `fold3-fold-config` (`overlays/Fold3ApertureOverlay`, `scripts/make-overlays.sh`) |
 | Outer screen brightness never changes | Only one backlight light (inner); Samsung HWC ignores per-display brightness | Helper mirrors live brightness to `panel1-backlight` | module `fold3-fold-config` (`service.sh`) |
-| No auto-brightness; no double tap to wake | The GSI ships Samsung SM8350's brightness curve but leaves `config_automatic_brightness_available` off; double-tap isn't wired to the touch drivers | RRO turns on auto-brightness and the double-tap setting; helper sends `aot_enable,<0/1>` to both touch panels (`/sys/class/sec/tsp1`, `tsp2`) following the setting | module `fold3-fold-config` (overlay + `service.sh`) |
+| No auto-brightness, double tap to wake or always-on display | The GSI ships Samsung SM8350's brightness curve but leaves `config_automatic_brightness_available` off; double-tap isn't wired to the touch drivers | RRO turns on auto-brightness, the double-tap setting and AOD (doze), with AOD brightness raised from 1/255 to 15%; helper sends `aot_enable,<0/1>` to both touch panels (`/sys/class/sec/tsp1`, `tsp2`) following the setting | module `fold3-fold-config` (overlay + `service.sh`) |
 | Fingerprint sensor stops detecting / enrollment lost | Samsung HAL loses its active user after boot and after every rild restart; Android only sends `setActiveGroup` once | Re-send `setActiveGroup` the moment the HAL starts (before system_server touches it), on every HAL restart, and after rild restarts | module `fold3-fingerprint-fix` (`tools/fp-active-group/`) |
 
 Disabled: `fold3-boot-splash` (cleared the outer-screen boot logo but killed the fingerprint HAL).
@@ -74,7 +74,7 @@ Don't `ctl.restart ril-daemon` to fix a slow phone start — it breaks the finge
 - ✅ Screen on/off and lock screen on both screens
 - ✅ Double-tap to wake on both screens (Settings toggle)
 - ✅ Auto-brightness (Adaptive brightness) on both screens
-- ☐ Always-on display
+- ✅ Always-on display on both screens (Settings → Always show time and info), with AOD brightness at about 15%
 - ✅ Half-fold doesn't glitch
 - ⚠️ Adaptive refresh doesn't ramp up to 120 Hz on its own — workaround: Settings → Display → **Minimum refresh rate = 120 Hz** (smooth, costs some battery)
 - ✅ Flex mode in apps (YouTube half-folded)

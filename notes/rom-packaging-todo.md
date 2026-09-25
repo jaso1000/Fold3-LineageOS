@@ -64,7 +64,7 @@ currently delivered via Magisk that must be baked in. See notes/procedure.md for
 - [ ] Hotspot DNS: TetheringNext never starts a DNS proxy → currently DNAT to 8.8.8.8 (module fold3-net-fixes)
 - [ ] Fold device-state config (foldedDeviceStates/postures/display_features) — RRO overlays/Fold3FrameworkOverlay
 - [ ] Auto-brightness + double tap to wake (RRO values) and DT2W: set `aot_enable` from the power HAL's DOUBLE_TAP_TO_WAKE mode (or an init/settings trigger) instead of the polling helper
-- [ ] Always-on display: doze config (see sm8350-common overlay: config_dozeAlwaysOnDisplayAvailable, config_dozeComponent, ...) + panel doze power mode
+- [ ] Always-on display: bake in the doze RRO values + AOD brightness 0.15; give the outer panel proper doze brightness in the framework instead of the helper
 - [ ] Outer display brightness: lights HAL/framework path for the second panel (currently a polling helper writing panel1-backlight)
 - [ ] Adaptive refresh rate: make it ramp to 120 Hz on interaction (DisplayModeDirector / peak refresh config, touch boost) instead of forcing min = 120 Hz
 - [ ] Cameras: set `persist.sys.phh.samsung.camera_ids=true` (or LineageOS samsung camera provider with `EXTRA_IDS`) and ship the Aperture aux-camera overlay

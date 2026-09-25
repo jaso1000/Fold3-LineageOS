@@ -226,6 +226,15 @@ BiTGApps Core doesn't pre-grant GSF: `pm grant com.google.android.gsf android.pe
   `config_supportDoubleTapWake=true` (Settings toggle, `secure double_tap_to_wake`), and service.sh
   writes `aot_enable,<setting>` to both panels at boot, on change, and every ~60 s.
 
+### Always-on display — module `fold3-fold-config` (RRO + service.sh)
+- The GSI already sets `config_dozeComponent` (SystemUI DozeService) and `config_dozeAlwaysOnEnabled`,
+  but `config_dozeAlwaysOnDisplayAvailable` was false. The RRO sets it (plus
+  `config_dozeAfterScreenOffByDefault`, as in samsung-sm8350). HWC/panel doze works on both panels.
+- AOD brightness: the GSI's `config_screenBrightnessDoze` = 1/255 (float 0.0) put the inner panel
+  at 2/510 (barely visible). The RRO sets 38 / 0.15 (inner reads 78/510 in AOD). The outer panel's
+  brightness helper uses the same 0.15 while `dumpsys display` shows `mPowerRequest=policy=DOZE`,
+  instead of copying the normal brightness.
+
 ### Disabled: `fold3-boot-splash`
 Flipping device state CLOSE→reset at boot cleared the outer-screen boot logo but kills Samsung's
 fingerprint HAL; the restarted HAL never gets `setActiveGroup` → no sensor, and boot cleanup

@@ -23,6 +23,7 @@ until [ "$(getprop sys.boot_completed)" = "1" ]; do sleep 1; done
     done
 ) &
 
+DOZE=0.15   # AOD brightness, matches config_screenBrightnessDozeFloat in the overlay
 INNER=/sys/class/backlight/panel0-backlight/brightness
 OUTER=/sys/class/backlight/panel1-backlight/brightness
 last=-1
@@ -33,7 +34,10 @@ while true; do
     if [ "$outer" -gt 0 ] && [ "$inner" -eq 0 ]; then
         # While the slider is being dragged SystemUI only sets a temporary brightness, which
         # get-brightness doesn't report; DisplayPowerController's dump does.
-        f=$(dumpsys display 2>/dev/null | awk -F: '/mTemporaryScreenBrightness:/ { v = $2 + 0; if ($2 !~ /NaN/ && v >= 0 && v <= 1) { print v; exit } }')
+        # In AOD (power request policy DOZE) use the doze brightness, not the slider's.
+        f=$(dumpsys display 2>/dev/null | awk -F: -v doze="$DOZE" '
+            /mPowerRequest=policy=DOZE/ { print doze; exit }
+            /mTemporaryScreenBrightness:/ { v = $2 + 0; if ($2 !~ /NaN/ && v >= 0 && v <= 1) { print v; exit } }')
         [ -z "$f" ] && f=$(cmd display get-brightness 2>/dev/null)
         want=$(awk -v f="$f" 'BEGIN { v = int(f * 510 + 0.5); if (v < 2) v = 2; if (v > 510) v = 510; print v }')
         # Also re-apply if the kernel reset the panel (e.g. after screen off/on)

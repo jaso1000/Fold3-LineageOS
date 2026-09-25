@@ -36,4 +36,13 @@
     <!-- Show "Double tap to wake"; fold3-fold-config's service.sh applies it to both touch
          panels via the sec_input "aot_enable" command (the driver then sends KEY_WAKEUP). -->
     <bool name="config_supportDoubleTapWake">true</bool>
+
+    <!-- Always-on display: the GSI already points config_dozeComponent at SystemUI's DozeService
+         but marks AOD unavailable. Values as in LineageOS samsung-sm8350. -->
+    <bool name="config_dozeAlwaysOnDisplayAvailable">true</bool>
+    <bool name="config_dozeAfterScreenOffByDefault">true</bool>
+    <!-- AOD brightness. The GSI default (1/255, 0.0) puts the inner panel at 2/510, almost
+         invisible. ~15% is close to Samsung's AOD level. Keep in sync with DOZE in service.sh. -->
+    <integer name="config_screenBrightnessDoze">38</integer>
+    <item name="config_screenBrightnessDozeFloat" format="float" type="dimen">0.15</item>
 </resources>
