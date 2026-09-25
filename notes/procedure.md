@@ -235,6 +235,27 @@ BiTGApps Core doesn't pre-grant GSF: `pm grant com.google.android.gsf android.pe
   brightness helper uses the same 0.15 while `dumpsys display` shows `mPowerRequest=policy=DOZE`,
   instead of copying the normal brightness.
 
+### USB-C dock / desktop mode — module `fold3-desktop`
+- **Symptom**: the dock only charges. No keyboard, mouse or hub, no monitor. Once USB worked, the monitor
+  only mirrored the phone.
+- **Cause 1 (USB host + DisplayPort)**: PD negotiates fine (the dock sends DR_SWAP, the phone becomes DFP), but
+  Samsung's `usb_notify` refuses host mode: `usb_notify: now restricted, skip this command`,
+  `/proc/usblog` USB EVENT shows `host_id blocking`. Its lock state `usb_sl` starts as
+  `SKY_DEFAULT` (init), which counts as restricted. On One UI, services.jar's
+  `com.android.server.usb.UsbHostRestrictor` writes `SUNNY_WORK_MODE` (unlocked),
+  `CLOUDY_WORK_MODE` (locked, USB allowed) or `RAINY_RESTRICT_MODE` (locked, USB blocked).
+  Numeric writes are rejected from init (`disallow input`). Writing `SUNNY_WORK_MODE` gives xHCI host
+  mode, the dock's hubs and HID devices, and DP alt mode (`card0-DP-1` connected). (Earlier red herrings: the
+  typec `data_role` file, `disable` = OFF, and the max77705 alternate-mode READY gate.)
+- **Cause 2 (mirror instead of desktop)**: the external display must be enabled (Android 16 may add it
+  disabled, and then it mirrors) and desktop mode needs `enable_freeform_support=1`,
+  `force_desktop_mode_on_external_displays=1`, and developer option **Enable desktop experience features**
+  (`override_desktop_experience_features=1` plus `persist.wm.debug.desktop_experience_devopts=1`,
+  read at boot).
+- **Fix**: the module sets the prop in post-fs-data; service.sh keeps `usb_sl=SUNNY_WORK_MODE` and the
+  settings, and runs `cmd display enable-display <id>` for disabled HDMI/DP displays.
+  Trade-off: no lock-screen USB blocking (AOSP behaviour).
+
 ### Disabled: `fold3-boot-splash`
 Flipping device state CLOSE→reset at boot cleared the outer-screen boot logo but kills Samsung's
 fingerprint HAL; the restarted HAL never gets `setActiveGroup` → no sensor, and boot cleanup

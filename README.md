@@ -33,6 +33,7 @@ Telstra/Boost** and both screens. Fixes are delivered as small Magisk modules (r
 | Only main camera usable; no ultra-wide / telephoto | Samsung's camera provider hides aux lenses from `getCameraIdList`; Aperture has aux cameras disabled | `persist.sys.phh.samsung.camera_ids=true` (GSI asks via `sehGetCameraIdList`) + Aperture RRO enabling aux cameras, ignoring logical/duplicate ids | module `fold3-fold-config` (`overlays/Fold3ApertureOverlay`, `scripts/make-overlays.sh`) |
 | Outer screen brightness never changes | Only one backlight light (inner); Samsung HWC ignores per-display brightness | Helper mirrors live brightness to `panel1-backlight` | module `fold3-fold-config` (`service.sh`) |
 | No auto-brightness, double tap to wake or always-on display | The GSI ships Samsung SM8350's brightness curve but leaves `config_automatic_brightness_available` off; double-tap isn't wired to the touch drivers | RRO turns on auto-brightness, the double-tap setting and AOD (doze), with AOD brightness raised from 1/255 to 15%; helper sends `aot_enable,<0/1>` to both touch panels (`/sys/class/sec/tsp1`, `tsp2`) following the setting | module `fold3-fold-config` (overlay + `service.sh`) |
+| USB-C dock: only charges (no keyboard/mouse, no monitor), then only mirrors | Samsung's `usb_notify` boots in lock state `SKY_DEFAULT`, which it treats as "restricted", so it refuses USB host (and with it DisplayPort). One UI's UsbHostRestrictor normally writes `SUNNY_WORK_MODE`. Android 16's desktop mode also needs the desktop-experience developer flags | Write `SUNNY_WORK_MODE` to `/sys/class/usb_notify/usb_control/usb_sl`; turn on freeform, force desktop mode on external displays, and desktop experience features; enable new external displays | module `fold3-desktop` |
 | Fingerprint sensor stops detecting / enrollment lost | Samsung HAL loses its active user after boot and after every rild restart; Android only sends `setActiveGroup` once | Re-send `setActiveGroup` the moment the HAL starts (before system_server touches it), on every HAL restart, and after rild restarts | module `fold3-fingerprint-fix` (`tools/fp-active-group/`) |
 
 Disabled: `fold3-boot-splash` (cleared the outer-screen boot logo but killed the fingerprint HAL).
@@ -85,6 +86,7 @@ Don't `ctl.restart ril-daemon` to fix a slow phone start — it breaks the finge
 - ✅ Rear main camera, inner (under-display) selfie, cover-screen selfie, flashlight
 - ✅ Ultra-wide and telephoto: photos from every lens, video recording with sound
 - ☐ Wired / USB-C headphones
+- ✅ USB-C dock: keyboard, mouse, USB hub, external monitor as a separate desktop (Android 16 desktop mode), charging passthrough
 
 **Sensors & hardware**
 - ✅ Fingerprint (survives reboot; rarely the enrollment can still drop at boot if the HAL crashes, see procedure.md), haptics, proximity sensor, wireless charging
