@@ -35,3 +35,8 @@ PRODUCT_SYSTEM_PROPERTIES += \
     persist.sys.phh.ims.floss=true \
     persist.wm.debug.desktop_experience_devopts=1
 
+# AOD in the panel's low-power mode. SystemUI's doze_display_state_supported defaults to false, so
+# AOD asked for a fully-on screen (SurfaceFlinger power On, 48-60 Hz, Samsung panel LPM off).
+# With STATE_DOZE, HWC dozes and Samsung's driver enters panel LPM (outer screen: 30 Hz).
+# DozeParameters reads this property before the resource.
+PRODUCT_SYSTEM_PROPERTIES +=     doze.display.supported=true

@@ -43,6 +43,11 @@ cause), built-in Play Integrity spoof (use PlayIntegrityFork).
 `Fold3FrameworkOverlay` sets default 0 / peak 120, like Pixels. Forcing Settings → Display →
 Minimum refresh rate → 120 Hz still works if you want it fixed at 120 (costs battery).
 
+**Always-on display in low-power mode**: SystemUI's `doze_display_state_supported` defaults to
+false, so AOD ran as a normal screen at low brightness (SurfaceFlinger power On, 48–60 Hz). The
+system property `doze.display.supported=true` makes it request STATE_DOZE; Samsung's driver then
+enters panel LPM (measured on the outer screen: 30 Hz).
+
 Scripts run as root in TrebleDroid's `phhsu_daemon` domain (like `rw-system.sh`) and exit at once
 unless `ro.product.vendor.model` is `SM-F926*`. The module scripts in `magisk-src/` stay the single
 source; `apply.sh` copies them in.

@@ -96,6 +96,7 @@ currently delivered via Magisk that must be baked in. See notes/procedure.md for
 - [ ] Hotspot DNS: TetheringNext never starts a DNS proxy → currently DNAT to 8.8.8.8 (module fold3-net-fixes)
 - [ ] Fold device-state config (foldedDeviceStates/postures/display_features) — RRO overlays/Fold3FrameworkOverlay
 - [ ] Auto-brightness + double tap to wake (RRO values) and DT2W: set `aot_enable` from the power HAL's DOUBLE_TAP_TO_WAKE mode (or an init/settings trigger) instead of the polling helper
+- [x] AOD power (2026-09-26): AOD ran fully on (SF power On, 48–60 Hz, panel LPM 0) because SystemUI doze_display_state_supported=false; `doze.display.supported=true` → SF Doze + Samsung panel LPM 30 Hz on the outer screen (verified live with setprop). Check the inner panel (supports LFD in LPM scope).
 - [ ] Always-on display: bake in the doze RRO values + AOD brightness 0.15 (inner) / 0.10 (outer, `persist.fold3.outer_aod`); give the outer panel proper doze brightness in the framework instead of the helper
 - [ ] Outer display brightness: lights HAL/framework path for the second panel (currently a polling helper writing panel1-backlight)
 - [x] Adaptive refresh rate: root cause 2026-09-26 — DisplayModeDirector's default vote capped render at 60 Hz (defaultRefreshRate 60, defaultPeakRefreshRate 0; max = min(default, peak)); outer screen idled at 48 Hz, never above 60. Fix: overlay config_defaultRefreshRate 0 + config_defaultPeakRefreshRate 120 (verify on device)
