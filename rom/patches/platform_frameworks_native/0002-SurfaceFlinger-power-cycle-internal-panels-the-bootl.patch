@@ -4,40 +4,40 @@ Date: Sat, 26 Sep 2026 10:11:49 +1000
 Subject: [PATCH] SurfaceFlinger: power-cycle internal panels the bootloader
  left lit
 
-Internal displays other than the boot display start as PowerMode::OFF in SurfaceFlinger, so a request to turn them off returned early and HWC was never told. On the Galaxy Z Fold3 the bootloader lights both panels, so the screen not in use kept showing the Samsung logo until the first fold. The first time an internal display is asked to be OFF while SurfaceFlinger already thinks it is, send HWC ON then OFF once.
+The bootloader lights both panels of the Galaxy Z Fold3, and the screen that is not in use kept showing the Samsung logo until the first fold: SurfaceFlinger starts non-boot displays as PowerMode::OFF, and an OFF request either returned early or was a no-op in HWC, which never powered that panel. If the first power request for an internal display is OFF, send HWC ON then OFF once.
 
-Change-Id: I625beac5b18796efc99d1ea838c2b7f1c876e9cc
+Change-Id: Id8def848709a8f3f1d245e3d543159f783c597b1
 ---
  services/surfaceflinger/SurfaceFlinger.cpp | 15 +++++++++++++++
  services/surfaceflinger/SurfaceFlinger.h   |  3 +++
  2 files changed, 18 insertions(+)
 
 diff --git a/services/surfaceflinger/SurfaceFlinger.cpp b/services/surfaceflinger/SurfaceFlinger.cpp
-index b48c6b1..b390453 100644
+index b48c6b1..8fd989b 100644
 --- a/services/surfaceflinger/SurfaceFlinger.cpp
 +++ b/services/surfaceflinger/SurfaceFlinger.cpp
-@@ -6160,6 +6160,21 @@ void SurfaceFlinger::setPhysicalDisplayPowerMode(const sp<DisplayDevice>& displa
+@@ -6159,6 +6159,21 @@ void SurfaceFlinger::setPhysicalDisplayPowerMode(const sp<DisplayDevice>& displa
+     ALOGD("Setting power mode %d on physical display %s", mode, to_string(displayId).c_str());
  
      const auto currentMode = display->getPowerMode();
++
++    // The bootloader may leave a panel lit that Android never uses at first (the Galaxy Z Fold3
++    // keeps the Samsung logo on the screen that isn't in use until the first fold). If the very
++    // first power request for an internal display is OFF, HWC may treat it as a no-op (it never
++    // powered the panel itself), so power it on and off once, like a real display switch does.
++    if (mBootloaderLitPanelsHandled.insert(displayId).second && mode == hal::PowerMode::OFF &&
++        mPhysicalDisplays.get(displayId)
++                .transform(&PhysicalDisplay::isInternal)
++                .value_or(false)) {
++        ALOGI("First power request for display %s is OFF: power cycling it (current %d)",
++              to_string(displayId).c_str(), static_cast<int>(currentMode));
++        getHwComposer().setPowerMode(displayId, hal::PowerMode::ON);
++        getHwComposer().setPowerMode(displayId, hal::PowerMode::OFF);
++    }
++
      if (currentMode == mode) {
-+        // Displays other than the boot display start out as OFF here, but HWC has never been
-+        // told so, and the bootloader may have left the panel lit (the Galaxy Z Fold3 keeps
-+        // the Samsung logo on the screen that isn't in use until the first fold). The first
-+        // time an internal display is asked to be OFF while we think it already is, power it
-+        // on and off through HWC once, like a real display switch does.
-+        if (mode == hal::PowerMode::OFF &&
-+            mPhysicalDisplays.get(displayId)
-+                    .transform(&PhysicalDisplay::isInternal)
-+                    .value_or(false) &&
-+            mBootloaderLitPanelsHandled.insert(displayId).second) {
-+            ALOGI("Power cycling display %s that was never powered by us",
-+                  to_string(displayId).c_str());
-+            getHwComposer().setPowerMode(displayId, hal::PowerMode::ON);
-+            getHwComposer().setPowerMode(displayId, hal::PowerMode::OFF);
-+        }
          return;
      }
- 
 diff --git a/services/surfaceflinger/SurfaceFlinger.h b/services/surfaceflinger/SurfaceFlinger.h
 index 4eb212e..fa4c362 100644
 --- a/services/surfaceflinger/SurfaceFlinger.h
