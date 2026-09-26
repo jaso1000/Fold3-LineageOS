@@ -33,7 +33,7 @@ Milestone 3 (framework) fixes, also applied by `apply.sh`:
 |---|---|
 | Signal bars always 0 | `patches/platform_frameworks_opt_telephony`: `ISehRadio…signalLevelInfoChanged` → SignalStrength (+ `CA_ENABLED=1`) |
 | Fingerprint enrollment lost at boot / after a HAL restart | `patches/platform_frameworks_base`: HIDL adapter sets the active group on every new HAL connection (the boot service still covers rild restarts) |
-| Samsung logo stays on the outer screen | `fold3-boot.sh`: powers off disabled built-in displays once at boot (log: `/data/misc/fold3/boot.log`) |
+| Samsung logo stays on the screen not in use | `patches/platform_frameworks_native` 0002: SurfaceFlinger sends HWC ON→OFF once for an internal panel it only thinks is off (the bootloader left it lit; an OFF request on an "already OFF" display used to return early) |
 
 Still manual: IMS APN + `carrier_volte_available` (per SIM). Not done: phone app slow start (root
 cause), built-in Play Integrity spoof (use PlayIntegrityFork).

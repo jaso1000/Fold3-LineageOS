@@ -9,9 +9,9 @@ Samsung RILs (seen on the Galaxy Z Fold3, SM-F926B) never fill the standard sign
 Change-Id: I8f7d679eab0c2d0586c1cab1fa3f47c3b9ae0be4
 ---
  .../com/android/internal/telephony/RIL.java   |  1 +
- .../internal/telephony/RadioNetworkProxy.java | 41 ++++++++++++++++++-
- .../internal/telephony/RadioServiceProxy.java |  5 +++
- 3 files changed, 45 insertions(+), 2 deletions(-)
+ .../internal/telephony/RadioNetworkProxy.java | 52 ++++++++++++++++++-
+ .../internal/telephony/RadioServiceProxy.java |  5 ++
+ 3 files changed, 56 insertions(+), 2 deletions(-)
 
 diff --git a/src/java/com/android/internal/telephony/RIL.java b/src/java/com/android/internal/telephony/RIL.java
 index f5486be..3eed76b 100644
@@ -26,7 +26,7 @@ index f5486be..3eed76b 100644
                      case HAL_SERVICE_DATA:
                          if (mMockModem == null) {
 diff --git a/src/java/com/android/internal/telephony/RadioNetworkProxy.java b/src/java/com/android/internal/telephony/RadioNetworkProxy.java
-index 93d4c81..162ba5f 100644
+index 93d4c81..87be8d4 100644
 --- a/src/java/com/android/internal/telephony/RadioNetworkProxy.java
 +++ b/src/java/com/android/internal/telephony/RadioNetworkProxy.java
 @@ -151,7 +151,9 @@ public class RadioNetworkProxy extends RadioServiceProxy {
@@ -40,7 +40,7 @@ index 93d4c81..162ba5f 100644
                  }
                  public void vendorConfigurationChanged(int type, SehVendorConfiguration[] configurations) {
                      l("vendorConfigurationChanged:");
-@@ -762,6 +764,33 @@ public class RadioNetworkProxy extends RadioServiceProxy {
+@@ -762,6 +764,44 @@ public class RadioNetworkProxy extends RadioServiceProxy {
          }
      }
  
@@ -50,10 +50,21 @@ index 93d4c81..162ba5f 100644
 +    // the default AOSP bucket for that level, and deliver it like currentSignalStrength.
 +    private static final int[] SEH_RSRP_FOR_LEVEL = {-120, -110, -100, -90, -80};
 +
++    private int mLastSehSignalLevel = -2;
++
 +    private void deliverSehSignalLevel(int level) {
 +        RIL ril = mRil;
-+        if (ril == null || level < 0) return;
++        if (ril == null) {
++            android.util.Log.w("PHH-Radio", "signalLevelInfoChanged " + level + ": no RIL");
++            return;
++        }
++        if (level < 0) return;
 +        level = Math.min(4, level);
++        if (level != mLastSehSignalLevel) {
++            android.util.Log.i("PHH-Radio", "Samsung signal level " + mLastSehSignalLevel + " -> "
++                    + level + (ril.mSignalStrengthRegistrant == null ? " (no registrant)" : ""));
++            mLastSehSignalLevel = level;
++        }
 +        android.telephony.CellSignalStrengthLte lte = new android.telephony.CellSignalStrengthLte(
 +                android.telephony.CellInfo.UNAVAILABLE, SEH_RSRP_FOR_LEVEL[level], -10, 100,
 +                android.telephony.CellInfo.UNAVAILABLE, android.telephony.CellInfo.UNAVAILABLE,
@@ -74,7 +85,7 @@ index 93d4c81..162ba5f 100644
      @Override
      public void setHidl(HalVersion halVersion, android.hardware.radio.V1_4.IRadio radio) {
          super.setHidl(halVersion, radio);
-@@ -845,7 +874,11 @@ public void setVendorSpecificConfigurationResponse(RadioResponseInfo info) {}
+@@ -845,7 +885,11 @@ public void setVendorSpecificConfigurationResponse(RadioResponseInfo info) {}
                      return -1;
                  }
                  public void execute(int type, String cmd) { l("execute " + cmd); }
@@ -87,7 +98,7 @@ index 93d4c81..162ba5f 100644
                  public void extendedRegistrationState(int type, vendor.samsung.hardware.radio.V2_0.SehExtendedRegStateResult state) { l("extendedRegistrationState"); }
                  public void needPacketUsage(String iface, needPacketUsageCallback hidl_cb) {
                      hidl_cb.onValues(0, new vendor.samsung.hardware.radio.V2_0.SehPacketUsage());
-@@ -865,6 +898,10 @@ public void setVendorSpecificConfigurationResponse(RadioResponseInfo info) {}
+@@ -865,6 +909,10 @@ public void setVendorSpecificConfigurationResponse(RadioResponseInfo info) {}
              arg.name = "FW_READY";
              arg.value = "1";
              args.add(arg);
