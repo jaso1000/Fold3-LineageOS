@@ -114,6 +114,10 @@ Don't `ctl.restart ril-daemon` to fix a slow phone start — it breaks the finge
 
 ## Next: a real ROM build
 
+**First build released 2026-09-26:** [fold3-2026.09.26](https://github.com/jaso1000/Fold3-LineageOS/releases/tag/fold3-2026.09.26)
+(system image with the Fold3 fixes built in, Sep 2026 security patch; notes in
+[notes/releases/2026-09-26.md](notes/releases/2026-09-26.md)). Emergency calls still don't work.
+
 The Magisk-module setup is feature-complete for daily use. What's left needs Android's own code
 changed, so the next step is building the ROM from source: **LineageOS 23.2 TrebleDroid GSI source
 + this repo's fixes baked in**, on a Windows desktop under WSL2. It will fix signal bars, the
