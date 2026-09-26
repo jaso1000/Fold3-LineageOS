@@ -1,0 +1,38 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Jason Walker <59085866+jaso1000@users.noreply.github.com>
+Date: Sat, 26 Sep 2026 11:54:54 +1000
+Subject: [PATCH] power: proximity check on wake: allow a vendor proximity
+ sensor type
+
+Samsung devices such as the Galaxy Z Fold3 expose no TYPE_PROXIMITY sensor, only vendor types (com.samsung.sensor.physical_proximity: 0 near, 8-9 far), so the LineageOS proximity check on wake never ran. Fall back to the sensor type named by ro.proximity_sensor_type_override.
+
+Change-Id: I9356c8af63a712c7fc6332d724f102e38e0d0d2a
+---
+ .../com/android/server/power/PowerManagerService.java | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
+
+diff --git a/services/core/java/com/android/server/power/PowerManagerService.java b/services/core/java/com/android/server/power/PowerManagerService.java
+index a8ed63f9d..4431b97b0 100644
+--- a/services/core/java/com/android/server/power/PowerManagerService.java
++++ b/services/core/java/com/android/server/power/PowerManagerService.java
+@@ -1529,6 +1529,17 @@ public final class PowerManagerService extends SystemService
+             // Initialize proximity sensor
+             mSensorManager = mContext.getSystemService(SensorManager.class);
+             mProximitySensor = mSensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY);
++            // Some devices (Samsung, e.g. Galaxy Z Fold3) only expose vendor proximity sensor
++            // types. Let the device name one for the proximity check on wake.
++            final String proxType = SystemProperties.get("ro.proximity_sensor_type_override", "");
++            if (mProximitySensor == null && !proxType.isEmpty()) {
++                for (Sensor s : mSensorManager.getSensorList(Sensor.TYPE_ALL)) {
++                    if (proxType.equals(s.getStringType())) {
++                        mProximitySensor = s;
++                        break;
++                    }
++                }
++            }
+ 
+             mLowPowerStandbyController.systemReady();
+ 
+-- 
+2.43.0
+

@@ -1,0 +1,55 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Jason Walker <59085866+jaso1000@users.noreply.github.com>
+Date: Sat, 26 Sep 2026 11:55:32 +1000
+Subject: [PATCH] display: Samsung touch panels: low-power gesture mode while
+ the display dozes
+
+Samsung sysinput keeps the touch panel in normal mode for STATE_DOZE, where touches are ignored, so double tap to wake did nothing in AOD. Close the panel input (/sys/class/sec/tspN/input/enabled) while its display dozes, which puts the controller into its low-power gesture mode, and reopen it on STATE_ON.
+
+Change-Id: Ib01b955ea59691c8a10ad17f448cddb8ad53e31d
+---
+ .../server/display/LocalDisplayAdapter.java   | 21 +++++++++++++++++++
+ 1 file changed, 21 insertions(+)
+
+diff --git a/services/core/java/com/android/server/display/LocalDisplayAdapter.java b/services/core/java/com/android/server/display/LocalDisplayAdapter.java
+index 9f39deb2a..96e62b0ed 100644
+--- a/services/core/java/com/android/server/display/LocalDisplayAdapter.java
++++ b/services/core/java/com/android/server/display/LocalDisplayAdapter.java
+@@ -80,6 +80,17 @@ import java.util.Objects;
+  * </p>
+  */
+ final class LocalDisplayAdapter extends DisplayAdapter {
++    private static void setSamsungTspInputEnabled(int tspId, boolean enabled) {
++        final java.io.File node = new java.io.File("/sys/class/sec/tsp" + tspId + "/input/enabled");
++        if (!node.exists()) return;
++        try (java.io.FileOutputStream fos = new java.io.FileOutputStream(node)) {
++            fos.write((enabled ? "1" : "0").getBytes());
++            Log.d("PHH", "tsp" + tspId + " input enabled=" + enabled);
++        } catch (Throwable t) {
++            Log.d("PHH", "Failed to set " + node + " to " + enabled, t);
++        }
++    }
++
+     private static final String TAG = "LocalDisplayAdapter";
+     private static final boolean DEBUG = false;
+ 
+@@ -1008,6 +1019,16 @@ final class LocalDisplayAdapter extends DisplayAdapter {
+                             } catch(Throwable t) {
+                                 Log.d("PHH", "Failed settings tsp enable", t);
+                             }
++                            // The HAL keeps the panel in normal touch mode while its display
++                            // dozes (AOD), where the framework ignores touches, so double tap to
++                            // wake did nothing. Close the panel's input while dozing, which puts
++                            // the controller into its low-power gesture mode (double tap reports
++                            // KEY_WAKEUP), and reopen it when the display turns on.
++                            final boolean doze = state == Display.STATE_DOZE
++                                    || state == Display.STATE_DOZE_SUSPEND;
++                            if (doze || state == Display.STATE_ON) {
++                                setSamsungTspInputEnabled(tspId, !doze);
++                            }
+                         }
+ 
+                         // fallback: when the samsung sysinput HAL is missing (not
+-- 
+2.43.0
+

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SystemUI settings for the Galaxy Z Fold3 -->
+<resources>
+    <!-- The phone has no standard proximity sensor, only Samsung types. The virtual one follows
+         whichever physical sensor is in use: 0 = covered, 8-9 = uncovered. With it, AOD pauses
+         (screen fully off) while covered, e.g. in a pocket. -->
+    <string name="proximity_sensor_type" translatable="false">com.samsung.sensor.physical_proximity</string>
+    <item name="proximity_sensor_threshold" format="float" type="dimen">5</item>
+</resources>

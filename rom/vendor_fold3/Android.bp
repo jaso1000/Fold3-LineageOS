@@ -25,6 +25,14 @@ runtime_resource_overlay {
     resource_dirs: ["overlays/Fold3LineageOverlay/res"],
 }
 
+runtime_resource_overlay {
+    name: "Fold3SystemUIOverlay",
+    product_specific: true,
+    sdk_version: "current",
+    manifest: "overlays/Fold3SystemUIOverlay/AndroidManifest.xml",
+    resource_dirs: ["overlays/Fold3SystemUIOverlay/res"],
+}
+
 // phh's Floss IMS with our Telstra patches (source: floss-ims/, patches/floss-ims/). Privileged,
 // not android.uid.system; permissions in privapp-permissions-me.phh.ims.xml.
 android_app_import {

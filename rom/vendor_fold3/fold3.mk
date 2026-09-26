@@ -8,6 +8,7 @@ PRODUCT_PACKAGES += \
     Fold3FrameworkOverlay \
     Fold3ApertureOverlay \
     Fold3LineageOverlay \
+    Fold3SystemUIOverlay \
     FlossIms
 
 # Boot scripts (copied from magisk-src/ by rom/apply.sh) + init
@@ -41,3 +42,7 @@ PRODUCT_SYSTEM_PROPERTIES += \
 # With STATE_DOZE, HWC dozes and Samsung's driver enters panel LPM (outer screen: 30 Hz).
 # DozeParameters reads this property before the resource.
 PRODUCT_SYSTEM_PROPERTIES +=     doze.display.supported=true
+
+# Proximity check on wake (LineageOS "Prevent accidental wake-up"): no TYPE_PROXIMITY sensor on
+# this phone, use Samsung's (patch in rom/patches/platform_frameworks_base).
+PRODUCT_SYSTEM_PROPERTIES +=     ro.proximity_sensor_type_override=com.samsung.sensor.physical_proximity

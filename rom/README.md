@@ -54,9 +54,18 @@ enters panel LPM (measured on the outer screen: 30 Hz).
 - `patches/platform_frameworks_base` 0002: TrebleDroid always called Samsung sysinput
   `setTspEnable` for device 1; the cover screen's panel (device 2) never got doze/off, so in AOD
   its touch stayed in normal mode and double tap didn't wake. Now device 1/2 per built-in display.
-- `Fold3LineageOverlay`: LineageOS "Prevent accidental wake-up" (proximity check before any
-  wake-up) available and on by default; AOSP doze already pauses AOD while the proximity sensor
-  is covered.
+- Double tap in AOD: `patches/platform_frameworks_base` 0004 closes the dozing display's touch
+  input (`/sys/class/sec/tspN/input/enabled`), which puts the controller into its low-power
+  gesture mode; sysinput alone keeps it in normal mode for doze.
+- Pocket: the phone has no TYPE_PROXIMITY sensor, only Samsung types
+  (`com.samsung.sensor.physical_proximity`: 0 covered, 8-9 uncovered). `Fold3SystemUIOverlay`
+  points SystemUI's doze proximity at it (AOD pauses while covered); `Fold3LineageOverlay` +
+  patch 0003 + `ro.proximity_sensor_type_override` make LineageOS "Prevent accidental wake-up"
+  use it (on by default).
+- AOD brightness: `fold3-boot.sh` sets each panel's `alpm` to `0x10002` (LPM version 1, HLPM), as
+  One UI's AOD service does; without it the panel dozed with no AOD brightness (kernel: "AOD
+  service didn't set proper LPM mode"). The brightness then follows the backlight level through
+  Samsung's candela table (2/10/30/60 nit).
 - `Fold3FrameworkOverlay`: `config_allowAutoBrightnessWhileDozing`; the cover-screen helper follows
   the framework's doze brightness (floor 10%; `persist.fold3.outer_aod` forces a level).
 
