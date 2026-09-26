@@ -35,7 +35,9 @@ Milestone 3 (framework) fixes, also applied by `apply.sh`:
 | Fingerprint enrollment lost at boot / after a HAL restart | `patches/platform_frameworks_base`: HIDL adapter sets the active group on every new HAL connection (the boot service still covers rild restarts) |
 | Samsung logo stays on the screen not in use | `patches/platform_frameworks_native` 0002: SurfaceFlinger sends HWC ON→OFF once for an internal panel it only thinks is off (the bootloader left it lit; an OFF request on an "already OFF" display used to return early) |
 
-Still manual: IMS APN + `carrier_volte_available` (per SIM). Not done: phone app slow start (root
+| VoLTE off after a flash (`carrier_volte_available` override lost; `cmd phone cc` is refused while PlayIntegrityFork reports a user build) | `patches/packages_apps_CarrierConfig`: VoLTE available for Telstra (1345) and Boost (2503, new) |
+
+Still manual: the IMS APN (kept in data across flashes). Not done: phone app slow start (root
 cause), built-in Play Integrity spoof (use PlayIntegrityFork).
 
 **Adaptive refresh rate** (48–120 Hz): the framework's default refresh-rate vote capped rendering at

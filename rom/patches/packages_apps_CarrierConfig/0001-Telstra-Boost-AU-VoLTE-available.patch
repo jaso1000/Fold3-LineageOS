@@ -1,0 +1,58 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Jason Walker <59085866+jaso1000@users.noreply.github.com>
+Date: Sat, 26 Sep 2026 10:40:39 +1000
+Subject: [PATCH] Telstra/Boost (AU): VoLTE available
+
+Telstra has no 3G, so calls must go over IMS. Mark VoLTE available for Telstra (carrier id 1345) and add Boost (2503, a Telstra MVNO) with the same settings, so IMS voice works without a carrier config override (the cc shell command is refused on user builds).
+
+Change-Id: I53a9913a4e2badc249f487f3befd78e213d29222
+---
+ .../carrier_config_carrierid_1345_Telstra.xml |  1 +
+ .../carrier_config_carrierid_2503_Boost.xml   | 24 +++++++++++++++++++
+ 2 files changed, 25 insertions(+)
+ create mode 100644 assets/carrier_config_carrierid_2503_Boost.xml
+
+diff --git a/assets/carrier_config_carrierid_1345_Telstra.xml b/assets/carrier_config_carrierid_1345_Telstra.xml
+index 49218c3..3d63f96 100644
+--- a/assets/carrier_config_carrierid_1345_Telstra.xml
++++ b/assets/carrier_config_carrierid_1345_Telstra.xml
+@@ -1,5 +1,6 @@
+ <?xml version="1.0" encoding="utf-8" standalone="yes"?>
+ <carrier_config>
++    <boolean name="carrier_volte_available_bool" value="true"/>
+     <boolean name="carrier_supports_ss_over_ut_bool" value="true"/>
+     <boolean name="show_4g_for_lte_data_icon_bool" value="true"/>
+     <int name="carrier_default_wfc_ims_mode_int" value="1"/>
+diff --git a/assets/carrier_config_carrierid_2503_Boost.xml b/assets/carrier_config_carrierid_2503_Boost.xml
+new file mode 100644
+index 0000000..3d63f96
+--- /dev/null
++++ b/assets/carrier_config_carrierid_2503_Boost.xml
+@@ -0,0 +1,24 @@
++<?xml version="1.0" encoding="utf-8" standalone="yes"?>
++<carrier_config>
++    <boolean name="carrier_volte_available_bool" value="true"/>
++    <boolean name="carrier_supports_ss_over_ut_bool" value="true"/>
++    <boolean name="show_4g_for_lte_data_icon_bool" value="true"/>
++    <int name="carrier_default_wfc_ims_mode_int" value="1"/>
++    <int name="maxImageHeight" value="1944"/>
++    <int name="maxImageWidth" value="2592"/>
++    <int name="maxMessageSize" value="2097152"/>
++    <int name="default_mtu_int" value="1400"/>
++    <string name="default_vm_number_string">+61101</string>
++    <string-array name="carrier_metered_apn_types_strings" num="3">
++        <item value="default"/>
++        <item value="dun"/>
++        <item value="supl"/>
++    </string-array>
++    <string-array name="read_only_apn_types_string_array" num="0"/>
++    <int-array name="lte_rsrp_thresholds_int_array" num="4">
++        <item value="-120"/>
++        <item value="-115"/>
++        <item value="-100"/>
++        <item value="-90"/>
++    </int-array>
++</carrier_config>
+-- 
+2.43.0
+

@@ -63,7 +63,8 @@ currently delivered via Magisk that must be baked in. See notes/procedure.md for
 - [ ] Floss IMS (`floss-ims/`) as priv-app + privapp-permissions + hidden-API exemptions
 - [x] GSF runtime permissions — MindTheGapps ships them (switched from BiTGApps 2026-09-26)
 - [ ] `pm disable com.android.phone/.security.SafetySourceReceiver` (boot ANR mitigation) — or fix properly
-- [ ] IMS APN + carrier_volte_available: make automatic per SIM, not hand-set for 505-01
+- [x] carrier_volte_available: CarrierConfig assets for Telstra 1345 + Boost 2503 (2026-09-26; the manual override was lost on the system flash, and `cmd phone cc` is refused on a "user" build, which PlayIntegrityFork fakes)
+- [ ] IMS APN: still hand-added (persists in data); ship it in apns-conf for 505-01
 
 ## Framework fixes to do in source
 - [ ] **Signal bars**: in RadioNetworkProxy's HIDL `ISehRadioIndication.signalLevelInfoChanged`
