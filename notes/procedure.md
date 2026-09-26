@@ -319,7 +319,11 @@ then deletes the enrolled fingerprint. Kept in `magisk-src/`, disabled on the ph
   Still to do (the final INVITE can't be tested): INVITE `urn:service:sos` on the emergency
   registration with P-Access-Network-Info, wired to `SERVICE_TYPE_EMERGENCY`; 380 handling.
 
-- **Signal bars 0**: Samsung rild never fills the standard signal indication (the framework's
+- **Signal bars 0 — solved 2026-09-26**: the standard signal indication stays empty only while a client is
+  registered on `ISehRadio` with `FW_READY` (TrebleDroid's telephony does this at start). With no ISehRadio
+  client on the SIM's slot, the same rild reports real signal strength (seen live: RSRP -81, SNR 18, level 4).
+  The ROM skips the registration (`ro.telephony.samsung_sehradio=false`). Earlier analysis, for reference:
+  Samsung rild never fills the standard signal indication (the framework's
   SignalStrengthController receives nothing; `GET_CELL_INFO_LIST` fails with error 63; cell info
   only arrives twice at boot). It reports bars **only** through Samsung's HIDL
   `ISehRadioIndication.signalLevelInfoChanged(SehSignalBar{lteLevel, nrLevel, ...})`, every

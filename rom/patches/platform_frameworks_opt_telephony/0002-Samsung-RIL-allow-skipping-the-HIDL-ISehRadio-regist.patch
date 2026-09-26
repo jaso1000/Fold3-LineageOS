@@ -1,0 +1,35 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Jason Walker <59085866+jaso1000@users.noreply.github.com>
+Date: Sat, 26 Sep 2026 12:06:55 +1000
+Subject: [PATCH] Samsung RIL: allow skipping the HIDL ISehRadio registration
+
+With a client registered on ISehRadio (FW_READY), Samsung RILs stop filling the standard signal strength indication and only report bars through signalLevelInfoChanged when the level changes, so the status bar showed 0 bars (seen on the Galaxy Z Fold3). Without the registration the same RIL reports real signal strength. ro.telephony.samsung_sehradio=false skips it.
+
+Change-Id: Icfabeb45462cc630eb655d6cf9ee4ca61ed48417
+---
+ .../android/internal/telephony/RadioNetworkProxy.java    | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/src/java/com/android/internal/telephony/RadioNetworkProxy.java b/src/java/com/android/internal/telephony/RadioNetworkProxy.java
+index 87be8d4..f203152 100644
+--- a/src/java/com/android/internal/telephony/RadioNetworkProxy.java
++++ b/src/java/com/android/internal/telephony/RadioNetworkProxy.java
+@@ -805,6 +805,15 @@ public class RadioNetworkProxy extends RadioServiceProxy {
+     @Override
+     public void setHidl(HalVersion halVersion, android.hardware.radio.V1_4.IRadio radio) {
+         super.setHidl(halVersion, radio);
++        // Once a client registers on ISehRadio and sends FW_READY, Samsung's RIL expects Samsung's
++        // framework to draw signal bars from its own indications: it stops filling the standard
++        // signal strength and only sends signalLevelInfoChanged when the level changes. Devices
++        // that don't need the Samsung-specific extras (e.g. the Galaxy Z Fold3) can skip the
++        // registration and get normal signal strength reports.
++        if (!android.os.SystemProperties.getBoolean("ro.telephony.samsung_sehradio", true)) {
++            android.util.Log.i("PHH-Radio", "Not registering HIDL ISehRadio (disabled)");
++            return;
++        }
+         try {
+             var samsungResponse = new vendor.samsung.hardware.radio.V2_2.ISehRadioResponse.Stub() {
+ public void getIccCardStatusResponse() {}
+-- 
+2.43.0
+
