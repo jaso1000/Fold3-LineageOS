@@ -50,6 +50,16 @@ false, so AOD ran as a normal screen at low brightness (SurfaceFlinger power On,
 system property `doze.display.supported=true` makes it request STATE_DOZE; Samsung's driver then
 enters panel LPM (measured on the outer screen: 30 Hz).
 
+**AOD double tap, pocket, brightness** (2026-09-26):
+- `patches/platform_frameworks_base` 0002: TrebleDroid always called Samsung sysinput
+  `setTspEnable` for device 1; the cover screen's panel (device 2) never got doze/off, so in AOD
+  its touch stayed in normal mode and double tap didn't wake. Now device 1/2 per built-in display.
+- `Fold3LineageOverlay`: LineageOS "Prevent accidental wake-up" (proximity check before any
+  wake-up) available and on by default; AOSP doze already pauses AOD while the proximity sensor
+  is covered.
+- `Fold3FrameworkOverlay`: `config_allowAutoBrightnessWhileDozing`; the cover-screen helper follows
+  the framework's doze brightness (floor 10%; `persist.fold3.outer_aod` forces a level).
+
 Scripts run as root in TrebleDroid's `phhsu_daemon` domain (like `rw-system.sh`) and exit at once
 unless `ro.product.vendor.model` is `SM-F926*`. The module scripts in `magisk-src/` stay the single
 source; `apply.sh` copies them in.

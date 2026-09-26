@@ -1,0 +1,50 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Jason Walker <59085866+jaso1000@users.noreply.github.com>
+Date: Sat, 26 Sep 2026 10:56:37 +1000
+Subject: [PATCH] display: Samsung sysinput: toggle the touch panel of the
+ display that changes state
+
+setTspEnable was always called for device 1 (the main panel). On the Galaxy Z Fold3 the cover screen is the second built-in display with its own panel (sysinput device 2), so it never got the doze/off transitions: in AOD its touch controller stayed in normal mode and double tap to wake did nothing. Use device 1 for the first built-in display and 2 for the other.
+
+Change-Id: Ie6678258d8d0e30ad90d070eadef24e88b174281
+---
+ .../server/display/LocalDisplayAdapter.java        | 14 ++++++++++----
+ 1 file changed, 10 insertions(+), 4 deletions(-)
+
+diff --git a/services/core/java/com/android/server/display/LocalDisplayAdapter.java b/services/core/java/com/android/server/display/LocalDisplayAdapter.java
+index 16159a693..9f39deb2a 100644
+--- a/services/core/java/com/android/server/display/LocalDisplayAdapter.java
++++ b/services/core/java/com/android/server/display/LocalDisplayAdapter.java
+@@ -976,10 +976,16 @@ final class LocalDisplayAdapter extends DisplayAdapter {
+                                 + "id=" + physicalDisplayId
+                                 + ", state=" + Display.stateToString(state) + ")");
+ 
++                        // Samsung sysinput device ids: 1 = default (main) touch panel,
++                        // 2 = sub panel. On foldables (Galaxy Z Fold3) the second built-in
++                        // display is the cover screen with its own panel; tell the HAL about
++                        // the panel that belongs to this display, so it also gets the doze
++                        // (AOD, double tap) and off transitions.
++                        final int tspId = mIsFirstDisplay ? 1 : 2;
+                         if (samsungSysinput != null) {
+                             try {
+-                                Log.d("PHH", "setTspEnable 1, " + state + ", true");
+-                                samsungSysinput.setTspEnable(1, state, true);
++                                Log.d("PHH", "setTspEnable " + tspId + ", " + state + ", true");
++                                samsungSysinput.setTspEnable(tspId, state, true);
+                             } catch(Throwable t) {
+                                 Log.d("PHH", "Failed settings tsp enable", t);
+                             }
+@@ -997,8 +1003,8 @@ final class LocalDisplayAdapter extends DisplayAdapter {
+ 
+                         if (samsungSysinput != null) {
+                             try {
+-                                Log.d("PHH", "setTspEnable 1, " + state + ", false");
+-                                samsungSysinput.setTspEnable(1, state, false);
++                                Log.d("PHH", "setTspEnable " + tspId + ", " + state + ", false");
++                                samsungSysinput.setTspEnable(tspId, state, false);
+                             } catch(Throwable t) {
+                                 Log.d("PHH", "Failed settings tsp enable", t);
+                             }
+-- 
+2.43.0
+

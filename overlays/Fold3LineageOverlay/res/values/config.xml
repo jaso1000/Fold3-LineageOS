@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- LineageOS platform settings for the Galaxy Z Fold3 -->
+<resources>
+    <!-- Pocket protection: Settings > Display > "Prevent accidental wake-up". Checks the
+         proximity sensor before any wake-up (power key, double tap on either screen) and stays
+         asleep if it's covered. On by default. -->
+    <bool name="config_proximityCheckOnWake">true</bool>
+    <bool name="config_proximityCheckOnWakeEnabledByDefault">true</bool>
+</resources>

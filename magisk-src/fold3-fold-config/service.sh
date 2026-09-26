@@ -23,9 +23,9 @@ until [ "$(getprop sys.boot_completed)" = "1" ]; do sleep 1; done
     done
 ) &
 
-# Outer panel AOD brightness. The inner panel's comes from config_screenBrightnessDozeFloat (0.15)
-# in the overlay; the outer one is set here and runs dimmer. Tune without reinstalling:
-# `setprop persist.fold3.outer_aod 0.08` (0.02-1.0), picked up the next time AOD starts.
+# Outer panel AOD brightness: follows the framework's doze brightness (auto-brightness while
+# dozing, config_allowAutoBrightnessWhileDozing in the ROM overlay), never below DOZE_DEFAULT.
+# Force a fixed level without reinstalling: `setprop persist.fold3.outer_aod 0.08` (0.02-1.0).
 DOZE_DEFAULT=0.10
 INNER=/sys/class/backlight/panel0-backlight/brightness
 OUTER=/sys/class/backlight/panel1-backlight/brightness
@@ -37,12 +37,21 @@ while true; do
     if [ "$outer" -gt 0 ] && [ "$inner" -eq 0 ]; then
         # While the slider is being dragged SystemUI only sets a temporary brightness, which
         # get-brightness doesn't report; DisplayPowerController's dump does.
-        # In AOD (power request policy DOZE) use the doze brightness, not the slider's.
-        DOZE=$(getprop persist.fold3.outer_aod)
-        case "$DOZE" in 0.0[2-9]*|0.[1-9]*|1|1.0) ;; *) DOZE=$DOZE_DEFAULT ;; esac
-        f=$(dumpsys display 2>/dev/null | awk -F: -v doze="$DOZE" '
-            /mPowerRequest=policy=DOZE/ { print doze; exit }
-            /mTemporaryScreenBrightness:/ { v = $2 + 0; if ($2 !~ /NaN/ && v >= 0 && v <= 1) { print v; exit } }')
+        # In AOD (power request policy DOZE) use the doze brightness, not the slider's: the
+        # latest doze BrightnessEvent of the first (default) display's controller.
+        FIXED=$(getprop persist.fold3.outer_aod)
+        case "$FIXED" in 0.0[2-9]*|0.[1-9]*|1|1.0) ;; *) FIXED="" ;; esac
+        f=$(dumpsys display 2>/dev/null | awk -v fixed="$FIXED" -v floor="$DOZE_DEFAULT" '
+            /^Display Power Controller:/ { dpc++ }
+            dpc == 1 && /mPowerRequest=policy=DOZE/ { doze = 1 }
+            dpc == 1 && /BrightnessEvent: brt=/ && /policy=DOZE/ {
+                s = $0; sub(/.*BrightnessEvent: brt=/, "", s); sub(/[(,].*/, "", s); dbrt = s + 0 }
+            tmp == "" && /mTemporaryScreenBrightness:/ {
+                s = $0; sub(/.*mTemporaryScreenBrightness:/, "", s)
+                if (s !~ /NaN/ && s + 0 >= 0 && s + 0 <= 1) tmp = s + 0 }
+            END {
+                if (doze) { v = fixed != "" ? fixed : (dbrt > floor ? dbrt : floor); print v }
+                else if (tmp != "") print tmp }')
         [ -z "$f" ] && f=$(cmd display get-brightness 2>/dev/null)
         want=$(awk -v f="$f" 'BEGIN { v = int(f * 510 + 0.5); if (v < 2) v = 2; if (v > 510) v = 510; print v }')
         # Also re-apply if the kernel reset the panel (e.g. after screen off/on)

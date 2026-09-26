@@ -7,6 +7,7 @@ SYSTEM_EXT_PRIVATE_SEPOLICY_DIRS += vendor/fold3/sepolicy
 PRODUCT_PACKAGES += \
     Fold3FrameworkOverlay \
     Fold3ApertureOverlay \
+    Fold3LineageOverlay \
     FlossIms
 
 # Boot scripts (copied from magisk-src/ by rom/apply.sh) + init

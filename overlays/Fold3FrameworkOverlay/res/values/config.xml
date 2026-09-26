@@ -52,4 +52,8 @@
          default cap, peak 120; SurfaceFlinger then picks 48-120 Hz from content and touch. -->
     <integer name="config_defaultRefreshRate">0</integer>
     <integer name="config_defaultPeakRefreshRate">120</integer>
+
+    <!-- AOD brightness follows the light sensor (scaled by the doze scale factor) instead of a
+         fixed level. The cover-screen helper (fold3-fold-config.sh) mirrors it to that panel. -->
+    <bool name="config_allowAutoBrightnessWhileDozing">true</bool>
 </resources>

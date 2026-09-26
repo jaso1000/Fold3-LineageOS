@@ -19,7 +19,7 @@ GATE='case "$(getprop ro.product.vendor.model)" in SM-F926*) ;; *) exit 0 ;; esa
 rm -rf "$V"
 mkdir -p "$V/bin" "$V/etc" "$V/fp" "$V/overlays" "$V/prebuilt/FlossIms"
 cp -a "$REPO/rom/vendor_fold3/." "$V/"
-cp -a "$REPO/overlays/Fold3FrameworkOverlay" "$REPO/overlays/Fold3ApertureOverlay" "$V/overlays/"
+cp -a "$REPO"/overlays/*/ "$V/overlays/"
 rm -rf "$V"/overlays/*/build
 
 # Module scripts -> /system/bin/fold3-<module>.sh, with a device gate after the shebang
