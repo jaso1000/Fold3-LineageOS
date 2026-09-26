@@ -33,7 +33,7 @@ Milestone 3 (framework) fixes, also applied by `apply.sh`:
 |---|---|
 | Signal bars always 0 | Root cause (2026-09-26): once TrebleDroid registers on `ISehRadio` and sends `FW_READY`, Samsung's RIL stops filling the standard signal strength and only sends `signalLevelInfoChanged` on level changes. `patches/platform_frameworks_opt_telephony` 0002 + `ro.telephony.samsung_sehradio=false` skip that registration; the RIL then reports real signal strength (RSRP/RSSI/SNR). 0001 still turns `signalLevelInfoChanged` into bars if the registration is on |
 | Fingerprint enrollment lost at boot / after a HAL restart | `patches/platform_frameworks_base`: HIDL adapter sets the active group on every new HAL connection (the boot service still covers rild restarts) |
-| Samsung logo stays on the screen not in use | `patches/platform_frameworks_native` 0002: SurfaceFlinger sends HWC ON→OFF once for an internal panel it only thinks is off (the bootloader left it lit; an OFF request on an "already OFF" display used to return early) |
+| Samsung logo stays on the screen not in use | **Quirk**: boot folded to avoid it. `patches/platform_frameworks_native` 0002 (SurfaceFlinger power-cycles an internal panel whose first power request is OFF) didn't fix the unfolded boot |
 
 | VoLTE off after a flash (`carrier_volte_available` override lost; `cmd phone cc` is refused while PlayIntegrityFork reports a user build) | `patches/packages_apps_CarrierConfig`: VoLTE available for Telstra (1345) and Boost (2503, new) |
 

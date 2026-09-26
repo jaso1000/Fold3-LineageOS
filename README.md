@@ -63,7 +63,7 @@ Don't `ctl.restart ril-daemon` to fix a slow phone start — it breaks the finge
 - ✅ SMS send/receive (over IMS), MMS send/receive
 - ☐ Long SMS (over 160 chars, multipart) and group MMS
 - ✅ RCS chats in Google Messages (needs Play Integrity BASIC + number entered manually, see install step 5)
-- ⚠️ Signal bars always show 0. Samsung's RIL only reports bars through its own `ISehRadio` callback. The fix is proven but left for the ROM build (a side service can hang the RIL).
+- ✅ Signal bars (ROM build 7): TrebleDroid's `ISehRadio` registration made Samsung's RIL stop filling the standard signal report; the ROM skips it (`ro.telephony.samsung_sehradio=false`), bars show real signal
 
 **Data & connectivity**
 - ✅ Mobile data, Wi-Fi, Bluetooth (headphones, controller), airplane mode
@@ -76,13 +76,14 @@ Don't `ctl.restart ril-daemon` to fix a slow phone start — it breaks the finge
 - ✅ Inner/outer switching on fold, outer touch, rotation on both screens
 - ✅ Brightness on both screens (outer follows the slider live)
 - ✅ Screen on/off and lock screen on both screens
-- ✅ Double-tap to wake on both screens (Settings toggle)
+- ✅ Double-tap to wake on both screens, also from AOD (ROM build 7: the dozing panel's touch input is closed so the controller enters its gesture mode)
 - ✅ Auto-brightness (Adaptive brightness) on both screens
-- ✅ Always-on display on both screens (Settings → Always show time and info), with AOD brightness at about 15% inner / 10% outer
+- ✅ Always-on display on both screens in Samsung's low-power panel mode (ROM: real doze + HLPM `alpm` mode; brightness follows auto-brightness via Samsung's AOD table)
+- ✅ Pocket: AOD turns off while the proximity sensor is covered (ROM build 7, Samsung proximity sensor; there's no standard one). "Prevent accidental wake-up" is on by default (not yet tested separately)
 - ✅ Half-fold doesn't glitch
-- ⚠️ Adaptive refresh doesn't ramp up to 120 Hz on its own — workaround: Settings → Display → **Minimum refresh rate = 120 Hz** (smooth, costs some battery)
+- ✅ Adaptive refresh 48–120 Hz (ROM: the framework's 60 Hz default cap removed; minimum refresh can stay at default)
 - ✅ Flex mode in apps (YouTube half-folded)
-- ⚠️ Samsung logo stays on the outer screen after boot (folded or unfolded) until the first fold/unfold. The cause is known (the bootloader leaves the idle panel lit); the fix is in the ROM build. Fold once after booting, because the static logo causes OLED image retention.
+- ⚠️ Samsung logo stays on the cover screen after an **unfolded** boot until the first fold (the bootloader leaves the unused panel lit). **Boot folded** and it clears. A SurfaceFlinger power-cycle attempt (ROM build 7) didn't fix the unfolded case; low priority. Fold once after booting unfolded to avoid OLED retention.
 
 **Audio, camera & media**
 - ✅ Speakers / media playback, microphone, screen recording, volume keys

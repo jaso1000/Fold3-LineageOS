@@ -44,8 +44,8 @@ currently delivered via Magisk that must be baked in. See notes/procedure.md for
      v2026.05.24, security patch 2026-09-01), flashed over the May GSI without wiping data, with
      MindTheGapps instead of BiTGApps. Calls/data, storage, fingerprint, Google apps all fine.
      `libpowermanager.so` is byte-identical to the May build, so `fold3-outer-touch` still applies.
-  2. Bake in everything under "Must bake in" (no Magisk needed).
-  3. Framework fixes below (signal bars first; they're proven).
+  2. Bake in everything under "Must bake in" (no Magisk needed). **Done 2026-09-26 (ROM build 7)**: all fold3-* modules disabled, everything runs from the ROM.
+  3. Framework fixes below (signal bars first; they're proven). **Mostly done 2026-09-26**: signal bars, fingerprint race, adaptive refresh, AOD (doze, brightness, double tap, pocket), VoLTE carrier config. Open: boot logo (quirk), phone slow start, Play Integrity spoof.
   4. Clean-install test on the phone, then release notes, XDA thread, licence notes (Floss GPLv2).
 - **Before building**: finish the open README checklist items (reboots, idle calls, battery,
   Android Auto, NFC, headphones, call features) so problems are attributed correctly.
@@ -91,7 +91,7 @@ currently delivered via Magisk that must be baked in. See notes/procedure.md for
 - [ ] AMR-WB/EVS (HD voice), SMS delivery-report handling (RP-ACK currently fed as a dummy status report); proper uplink gain instead of AGC
 
 ## Cosmetic / later
-- [ ] Outer-screen boot logo: at boot, power off the inactive panel via DisplayManager so HWC sends it a real display-off (the bootloader leaves it lit, `dpms=On`). Don't flip device state. Try `cmd display power-off/power-reset` first. See procedure.md.
+- [ ] Outer-screen boot logo (quirk, 2026-09-26): booting folded clears it; booting unfolded leaves the logo on the cover screen until the first fold. SurfaceFlinger patch (power-cycle an internal panel whose first power request is OFF) didn't help the unfolded case. Low priority. Original note: at boot, power off the inactive panel via DisplayManager so HWC sends it a real display-off (the bootloader leaves it lit, `dpms=On`). Don't flip device state. Try `cmd display power-off/power-reset` first. See procedure.md.
 
 ## Added 2026-09-24 evening
 - [ ] Hotspot DNS: TetheringNext never starts a DNS proxy → currently DNAT to 8.8.8.8 (module fold3-net-fixes)
