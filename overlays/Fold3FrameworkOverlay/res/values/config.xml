@@ -45,4 +45,11 @@
          invisible. ~15% is close to Samsung's AOD level. Keep in sync with DOZE in service.sh. -->
     <integer name="config_screenBrightnessDoze">38</integer>
     <item name="config_screenBrightnessDozeFloat" format="float" type="dimen">0.15</item>
+
+    <!-- Adaptive refresh rate. The framework default (default 60, peak 0) adds a 60 Hz render cap
+         that the peak-refresh setting can't lift (the max is min(default, peak)), so the panel
+         never went above 60 Hz unless "minimum refresh rate" was forced to 120. Like Pixels: no
+         default cap, peak 120; SurfaceFlinger then picks 48-120 Hz from content and touch. -->
+    <integer name="config_defaultRefreshRate">0</integer>
+    <integer name="config_defaultPeakRefreshRate">120</integer>
 </resources>

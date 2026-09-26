@@ -38,10 +38,10 @@ Milestone 3 (framework) fixes, also applied by `apply.sh`:
 Still manual: IMS APN + `carrier_volte_available` (per SIM). Not done: phone app slow start (root
 cause), built-in Play Integrity spoof (use PlayIntegrityFork).
 
-**Quirk, opt-in: 120 Hz.** Adaptive refresh doesn't ramp up to 120 Hz on its own on this phone
-(SurfaceFlinger's defaults already use content detection and a 200 ms touch timer, so the cause is
-elsewhere). If you want it smooth all the time, set Settings → Display → **Minimum refresh rate →
-120 Hz** (costs battery).
+**Adaptive refresh rate** (48–120 Hz): the framework's default refresh-rate vote capped rendering at
+60 Hz (`defaultRefreshRate` 60, `defaultPeakRefreshRate` 0, and the max is min(default, peak)).
+`Fold3FrameworkOverlay` sets default 0 / peak 120, like Pixels. Forcing Settings → Display →
+Minimum refresh rate → 120 Hz still works if you want it fixed at 120 (costs battery).
 
 Scripts run as root in TrebleDroid's `phhsu_daemon` domain (like `rw-system.sh`) and exit at once
 unless `ro.product.vendor.model` is `SM-F926*`. The module scripts in `magisk-src/` stay the single
