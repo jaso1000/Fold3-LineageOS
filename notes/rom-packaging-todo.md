@@ -123,5 +123,9 @@ currently delivered via Magisk that must be baked in. See notes/procedure.md for
 - Install instructions: point at the GitHub release image (not the MisterZtr GSI + modules route).
 - Emergency calls wording (user request 2026-09-28): SIP-level tests done on Telstra (EIMS PDN up,
   emergency REGISTER 401 -> AKA -> 200 OK); the emergency INVITE isn't implemented and **no real
-  emergency call has been tested** (never dial 000 to test). Keep "treat as NOT working, keep another
-  phone" prominent.
+  emergency call has been tested** (never dial 000 to test). Label it **"untested"** (user's choice,
+  2026-09-28), keeping the facts next to it. Agreed wording:
+  > ⚠️ **Emergency calls (000/112): untested.** SIP-level emergency tests pass on Telstra (emergency
+  > data connection and registration), but the dedicated emergency call isn't implemented yet, so
+  > 000 is sent as a normal VoLTE call, and no real emergency call has been made. **Don't rely on
+  > this phone for emergencies; keep another phone available.**
