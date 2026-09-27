@@ -1,0 +1,36 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Jason Walker <59085866+jaso1000@users.noreply.github.com>
+Date: Mon, 28 Sep 2026 07:54:50 +1000
+Subject: [PATCH] AU: add Telstra IMS APN (505-01)
+
+Telstra has no 3G, so calls and SMS go over IMS; without an ims APN a fresh install has no VoLTE (also used by Telstra MVNOs such as Boost).
+
+Change-Id: I4134c9b227b682735493088852d1daea020a8fca
+---
+ AU.xml | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/AU.xml b/AU.xml
+index ddb3a52..f3d8576 100644
+--- a/AU.xml
++++ b/AU.xml
+@@ -34,6 +34,16 @@
+         type="dun"
+         user=""
+     />
++    <apn
++        mcc="505"
++        mnc="01"
++        carrier="Telstra IMS"
++        apn="ims"
++        protocol="IPV4V6"
++        roaming_protocol="IPV4V6"
++        type="ims"
++        user_visible="false"
++    />
+     <apn
+         mcc="505"
+         mnc="01"
+-- 
+2.43.0
+

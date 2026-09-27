@@ -56,4 +56,25 @@
     <!-- AOD brightness follows the light sensor (scaled by the doze scale factor) instead of a
          fixed level. The cover-screen helper (fold3-fold-config.sh) mirrors it to that panel. -->
     <bool name="config_allowAutoBrightnessWhileDozing">true</bool>
+
+    <!-- Settings > Display > "Continue using apps on fold" (Always / Swipe up / Never). The ROM
+         defaults it to "Never" (lock on fold, like One UI) in fold3-boot.sh. -->
+    <bool name="config_fold_lock_behavior">true</bool>
+
+    <!-- Low-brightness flicker: below 120 Hz, dim panels shimmer / shift colour (worst on the cover
+         screen). Like One UI's "passive" refresh mode, hold a fixed 120 Hz while the screen is dim
+         in a dim room. One UI's thresholds (framework RefreshRateConfig): cover 84 brightness /
+         200 lux, inner 35 / 50 lux; Android has one global zone, so use the cover's. -->
+    <integer-array name="config_brightnessThresholdsOfPeakRefreshRate">
+        <item>84</item>
+    </integer-array>
+    <integer-array name="config_ambientThresholdsOfPeakRefreshRate">
+        <item>200</item>
+    </integer-array>
+    <integer name="config_defaultRefreshRateInZone">120</integer>
+
+    <!-- AOD brightness = auto-brightness x 30%. Samsung's panels then pick one of their four AOD
+         levels from the backlight value (kernel aod_candela_map: 0-11 -> 2 nit, 12-29 -> 10,
+         30-52 -> 30, 53+ -> 60), so AOD steps 2/10/30/60 nit with the room like One UI. -->
+    <fraction name="config_screenAutoBrightnessDozeScaleFactor">30%</fraction>
 </resources>

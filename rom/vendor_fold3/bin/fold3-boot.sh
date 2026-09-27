@@ -12,6 +12,10 @@ for p in panel panel1; do echo 65538 > /sys/class/lcd/$p/alpm 2>/dev/null; done
 /system/bin/fold3-floss-ims.sh
 /system/bin/fold3-net-fixes.sh
 
+# Lock when folded, like One UI, unless the user picked something else in Settings > Display >
+# "Continue using apps on fold" (framework: FoldSettingProvider, Settings.System).
+[ "$(settings get system fold_lock_behavior_setting)" = "null" ] &&     settings put system fold_lock_behavior_setting sleep_on_fold_key
+
 # Phone app blocks on rild's slow start and ANR-loops at boot; the safety-source receiver is
 # what trips it (notes/procedure.md, "Phone app / no network after boot"). Persistent, so only
 # needed once per data wipe.

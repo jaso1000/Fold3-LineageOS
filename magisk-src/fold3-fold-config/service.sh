@@ -24,9 +24,16 @@ until [ "$(getprop sys.boot_completed)" = "1" ]; do sleep 1; done
 ) &
 
 # Outer panel AOD brightness: follows the framework's doze brightness (auto-brightness while
-# dozing, config_allowAutoBrightnessWhileDozing in the ROM overlay), never below DOZE_DEFAULT.
+# dozing x config_screenAutoBrightnessDozeScaleFactor in the ROM overlay). Samsung's panel turns
+# the backlight value into one of four AOD levels (0-11 -> 2 nit, 12-29 -> 10, 30-52 -> 30,
+# 53+ -> 60); DOZE_DEFAULT (bl 6) keeps it at least on the 2 nit step.
 # Force a fixed level without reinstalling: `setprop persist.fold3.outer_aod 0.08` (0.02-1.0).
-DOZE_DEFAULT=0.10
+DOZE_DEFAULT=0.012
+# Inner panel: like One UI, turn its low-frequency drive (LFD, down to 10 Hz on static content)
+# off at low brightness, where it shimmers. One UI: brightness <= 35/255 (and <= 50 lux).
+LFD=/sys/class/lcd/panel/vrr_lfd
+LFD_LOW_BL=70   # 35/255 on the 0-510 backlight scale
+lfd_off=
 INNER=/sys/class/backlight/panel0-backlight/brightness
 OUTER=/sys/class/backlight/panel1-backlight/brightness
 last=-1
@@ -62,6 +69,13 @@ while true; do
         sleep 0.3
     else
         last=-1
+        if [ "$inner" -gt 0 ]; then
+            if [ "$inner" -le $LFD_LOW_BL ]; then want_lfd=1; else want_lfd=0; fi
+            if [ "$want_lfd" != "$lfd_off" ]; then
+                echo "client=disp scope=normal scalability=$want_lfd" > $LFD 2>/dev/null
+                lfd_off=$want_lfd
+            fi
+        fi
         sleep 2
     fi
 done
