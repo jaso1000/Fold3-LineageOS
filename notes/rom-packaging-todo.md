@@ -118,3 +118,10 @@ currently delivered via Magisk that must be baked in. See notes/procedure.md for
   Cost: module compatibility; no upstream security fixes (Samsung support and Linux 5.4 both ended).
 - If ever: first rebuild the stock kernel unchanged and repack the stock boot.img (magiskboot),
   like milestone 1.
+
+## Docs to update after build 10 (GitHub README + release notes + XDA post draft)
+- Install instructions: point at the GitHub release image (not the MisterZtr GSI + modules route).
+- Emergency calls wording (user request 2026-09-28): SIP-level tests done on Telstra (EIMS PDN up,
+  emergency REGISTER 401 -> AKA -> 200 OK); the emergency INVITE isn't implemented and **no real
+  emergency call has been tested** (never dial 000 to test). Keep "treat as NOT working, keep another
+  phone" prominent.
