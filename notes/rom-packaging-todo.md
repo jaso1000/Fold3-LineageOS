@@ -107,3 +107,14 @@ currently delivered via Magisk that must be baked in. See notes/procedure.md for
 - [ ] Fix TrebleDroid app crash in Desktop.kt onInputDeviceAdded (null InputDevice) if we keep that app
 - [ ] Android Auto: GApps flavour for the ROM should include it as a priv-app (or document fold3-android-auto)
 - [ ] Play Integrity: built-in certified-props spoof (PIHooks/PixelPropsUtils-style, GMS DroidGuard only) so RCS gets BASIC without root; optional user-supplied keybox
+
+## Optional, not planned: own kernel (decided 2026-09-28: not for now)
+- Stock kernel: `5.4.274-qgki-30958977-abF926BXXSJJZH3`, built with Android clang 11.0.2
+  (r383902b1). 101 vendor modules in `/vendor/lib/modules`, `CONFIG_MODVERSIONS=y`: a custom kernel
+  must keep Samsung's config/symbol CRCs or rebuild and ship the modules.
+- Source: opensource.samsung.com (F926BXXSJJZH3), or github.com/cawilliamson/android_kernel_samsung_q2q
+  (`stock` and `leankernel` branches).
+- Would enable: boot-logo fix in the panel driver, charge limit, KernelSU, kernel WireGuard.
+  Cost: module compatibility; no upstream security fixes (Samsung support and Linux 5.4 both ended).
+- If ever: first rebuild the stock kernel unchanged and repack the stock boot.img (magiskboot),
+  like milestone 1.
