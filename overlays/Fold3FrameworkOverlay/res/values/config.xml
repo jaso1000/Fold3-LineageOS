@@ -64,12 +64,13 @@
     <!-- Low-brightness flicker: below 120 Hz, dim panels shimmer / shift colour (worst on the cover
          screen). Like One UI's "passive" refresh mode, hold a fixed 120 Hz while the screen is dim
          in a dim room. One UI's thresholds (framework RefreshRateConfig): cover 84 brightness /
-         200 lux, inner 35 / 50 lux; Android has one global zone, so use the cover's. -->
+         200 lux, inner 35 / 50 lux. Android has one global zone; the cover's values held 120 Hz
+         almost everywhere indoors (~100 lux), so use the inner's: only dim rooms. -->
     <integer-array name="config_brightnessThresholdsOfPeakRefreshRate">
-        <item>84</item>
+        <item>35</item>
     </integer-array>
     <integer-array name="config_ambientThresholdsOfPeakRefreshRate">
-        <item>200</item>
+        <item>50</item>
     </integer-array>
     <integer name="config_defaultRefreshRateInZone">120</integer>
 
