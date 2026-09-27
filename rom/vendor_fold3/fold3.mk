@@ -59,3 +59,7 @@ PRODUCT_SYSTEM_PROPERTIES += persist.dm.passive.display_brightness=35
 PRODUCT_SYSTEM_PROPERTIES += persist.dm.passive.ambient_brightness=50
 PRODUCT_SYSTEM_PROPERTIES += persist.dm.passive.sub_display_brightness=84
 PRODUCT_SYSTEM_PROPERTIES += persist.dm.passive.sub_ambient_brightness=200
+
+# AOD: SurfaceFlinger at the panel's lowest rate while dozing (the panel itself runs AOD in its
+# low-power mode, 30 Hz cover / 1-30 Hz inner). Patch in rom/patches/platform_frameworks_base.
+PRODUCT_SYSTEM_PROPERTIES += ro.display.doze_refresh_rate=48

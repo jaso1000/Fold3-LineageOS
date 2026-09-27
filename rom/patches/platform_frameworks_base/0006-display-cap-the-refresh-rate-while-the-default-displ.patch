@@ -1,0 +1,41 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Jason Walker <59085866+jaso1000@users.noreply.github.com>
+Date: Mon, 28 Sep 2026 09:38:51 +1000
+Subject: [PATCH] display: cap the refresh rate while the default display dozes
+
+Nothing lowers the refresh rate in AOD, so SurfaceFlinger kept the last rate (120 Hz) for a static clock. When ro.display.doze_refresh_rate is set, vote that maximum while the default display is in STATE_DOZE / DOZE_SUSPEND.
+
+Change-Id: Ibb4a48e2b24fb7634e21e5f33ed925ebc6b04ec6
+---
+ .../server/display/mode/DisplayModeDirector.java    | 13 +++++++++++++
+ 1 file changed, 13 insertions(+)
+
+diff --git a/services/core/java/com/android/server/display/mode/DisplayModeDirector.java b/services/core/java/com/android/server/display/mode/DisplayModeDirector.java
+index fe0a494f9..79b29d1c8 100644
+--- a/services/core/java/com/android/server/display/mode/DisplayModeDirector.java
++++ b/services/core/java/com/android/server/display/mode/DisplayModeDirector.java
+@@ -2432,8 +2432,21 @@ public class DisplayModeDirector {
+             return false;
+         }
+ 
++        // Highest refresh rate while the default display dozes (AOD). The panel draws AOD in its
++        // own low-power mode; nothing else lowers the rate there, so SurfaceFlinger would keep
++        // the last one (e.g. 120 Hz) and wake up that often for an AOD clock. 0 = no cap.
++        private final int mDozeRefreshRate =
++                android.os.SystemProperties.getInt("ro.display.doze_refresh_rate", 0);
++
+         @GuardedBy("mLock")
+         private void updateFlickerRefreshRateVotes() {
++            if (mDozeRefreshRate > 0 && (mDefaultDisplayState == Display.STATE_DOZE
++                    || mDefaultDisplayState == Display.STATE_DOZE_SUSPEND)) {
++                mVotesStorage.updateGlobalVote(Vote.PRIORITY_FLICKER_REFRESH_RATE,
++                        Vote.forPhysicalRefreshRates(0f, mDozeRefreshRate));
++                mVotesStorage.updateGlobalVote(Vote.PRIORITY_FLICKER_REFRESH_RATE_SWITCH, null);
++                return;
++            }
+             // The light sensor isn't observed unless the display is fully on, so a vote taken
+             // just before AOD / screen off would otherwise be kept (e.g. 120 Hz all through AOD).
+             if (!mRefreshRateChangeable || mLowPowerModeEnabled || !isDeviceActive()) {
+-- 
+2.43.0
+
