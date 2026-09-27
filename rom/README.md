@@ -76,6 +76,15 @@ device-state *properties*, which Samsung's `device_state_configuration.xml` does
 HALF_FOLDED/OPEN (unfolding wakes the phone). "Swipe up to continue" isn't implemented in AOSP and
 behaves like "Always".
 
+**Low-brightness flicker, One UI style** (2026-09-28): Samsung's panels shift colour when the refresh
+rate drops at low brightness. One UI's `RefreshRateController` holds a fixed rate ("passive" mode)
+when brightness and ambient light are both low, with per-display thresholds in
+`persist.dm.passive.[sub_]{display,ambient}_brightness` (inner 35 / 50 lux, cover 84 / 200 lux), and
+turns the inner panel's LFD off (`vrr_lfd` `scalability=1`). The ROM does the same:
+`patches/platform_frameworks_base` 0005 uses those properties as each display's lower blocking zone
+(held at 120 Hz) and drops the zone outside STATE_ON, so AOD/screen-off never inherits it; the
+fold-config helper switches the inner LFD.
+
 Scripts run as root in TrebleDroid's `phhsu_daemon` domain (like `rw-system.sh`) and exit at once
 unless `ro.product.vendor.model` is `SM-F926*`. The module scripts in `magisk-src/` stay the single
 source; `apply.sh` copies them in.

@@ -1,0 +1,77 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Jason Walker <59085866+jaso1000@users.noreply.github.com>
+Date: Mon, 28 Sep 2026 08:53:34 +1000
+Subject: [PATCH] display: One UI style low-brightness refresh zone:
+ per-display thresholds, only while the display is on
+
+Samsung foldables keep separate low-brightness (passive) refresh-rate thresholds per built-in display (persist.dm.passive.[sub_]{display,ambient}_brightness): use them as that display lower blocking zone. Also revoke the flicker-zone vote unless the default display is fully on: the light sensor is not observed in doze/off, so a vote taken just before AOD kept the display at the zone refresh rate (120 Hz) all through AOD.
+
+Change-Id: I5e3318bd2292084f33879c98ade56cf17c75ab40
+---
+ .../server/display/DisplayDeviceConfig.java   | 21 +++++++++++++++++++
+ .../display/mode/DisplayModeDirector.java     |  7 ++++++-
+ 2 files changed, 27 insertions(+), 1 deletion(-)
+
+diff --git a/services/core/java/com/android/server/display/DisplayDeviceConfig.java b/services/core/java/com/android/server/display/DisplayDeviceConfig.java
+index 5f92c98b5..c49b049b0 100644
+--- a/services/core/java/com/android/server/display/DisplayDeviceConfig.java
++++ b/services/core/java/com/android/server/display/DisplayDeviceConfig.java
+@@ -955,9 +955,30 @@ public class DisplayDeviceConfig {
+                 isFirstDisplay, flags);
+ 
+         config.copyUninitializedValuesFromSecondaryConfig(loadDefaultConfigurationXml(context));
++        config.applyPassiveRefreshRateThresholds(isFirstDisplay);
+         return config;
+     }
+ 
++    /**
++     * Samsung devices keep separate low-brightness ("passive") refresh-rate thresholds for their
++     * built-in displays in persist.dm.passive.[sub_]display_brightness (0-255) and
++     * persist.dm.passive.[sub_]ambient_brightness (lux), the "sub_" ones for the second display
++     * (e.g. the Galaxy Z Fold3 cover screen). When set, use them as this display's lower blocking
++     * zone: below both, the refresh rate is held to avoid low-brightness flicker.
++     */
++    private void applyPassiveRefreshRateThresholds(boolean isFirstDisplay) {
++        final String prefix = isFirstDisplay ? "persist.dm.passive." : "persist.dm.passive.sub_";
++        final int display = android.os.SystemProperties.getInt(prefix + "display_brightness", -1);
++        final int ambient = android.os.SystemProperties.getInt(prefix + "ambient_brightness", -1);
++        if (display < 0 || ambient < 0) {
++            return;
++        }
++        mLowDisplayBrightnessThresholds =
++                displayBrightnessThresholdsIntToFloat(new int[] {display});
++        mLowAmbientBrightnessThresholds =
++                ambientBrightnessThresholdsIntToFloat(new int[] {ambient});
++    }
++
+     /**
+      * Creates an instance using global values since no display device config xml exists. Uses
+      * values from config or PowerManager.
+diff --git a/services/core/java/com/android/server/display/mode/DisplayModeDirector.java b/services/core/java/com/android/server/display/mode/DisplayModeDirector.java
+index b14448356..fe0a494f9 100644
+--- a/services/core/java/com/android/server/display/mode/DisplayModeDirector.java
++++ b/services/core/java/com/android/server/display/mode/DisplayModeDirector.java
+@@ -2434,7 +2434,9 @@ public class DisplayModeDirector {
+ 
+         @GuardedBy("mLock")
+         private void updateFlickerRefreshRateVotes() {
+-            if (!mRefreshRateChangeable || mLowPowerModeEnabled) {
++            // The light sensor isn't observed unless the display is fully on, so a vote taken
++            // just before AOD / screen off would otherwise be kept (e.g. 120 Hz all through AOD).
++            if (!mRefreshRateChangeable || mLowPowerModeEnabled || !isDeviceActive()) {
+                 // Revoke previous vote from BrightnessObserver
+                 mVotesStorage.updateGlobalVote(Vote.PRIORITY_FLICKER_REFRESH_RATE, null);
+                 mVotesStorage.updateGlobalVote(Vote.PRIORITY_FLICKER_REFRESH_RATE_SWITCH, null);
+@@ -2526,6 +2528,9 @@ public class DisplayModeDirector {
+             if (mDefaultDisplayState != state) {
+                 mDefaultDisplayState = state;
+                 updateSensorStatus();
++                synchronized (mLock) {
++                    updateFlickerRefreshRateVotes();
++                }
+             }
+         }
+ 
+-- 
+2.43.0
+

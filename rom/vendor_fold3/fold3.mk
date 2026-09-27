@@ -51,3 +51,11 @@ PRODUCT_SYSTEM_PROPERTIES +=     ro.proximity_sensor_type_override=com.samsung.s
 # filling the standard signal strength report; without it bars show real values
 # (patch in rom/patches/platform_frameworks_opt_telephony).
 PRODUCT_SYSTEM_PROPERTIES += ro.telephony.samsung_sehradio=false
+
+# Low-brightness refresh zone per display, One UI's own properties and default values
+# (framework RefreshRateConfig): below both thresholds the refresh rate is held at
+# config_defaultRefreshRateInZone to avoid flicker (patch in rom/patches/platform_frameworks_base).
+PRODUCT_SYSTEM_PROPERTIES += persist.dm.passive.display_brightness=35
+PRODUCT_SYSTEM_PROPERTIES += persist.dm.passive.ambient_brightness=50
+PRODUCT_SYSTEM_PROPERTIES += persist.dm.passive.sub_display_brightness=84
+PRODUCT_SYSTEM_PROPERTIES += persist.dm.passive.sub_ambient_brightness=200
