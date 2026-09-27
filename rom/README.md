@@ -85,6 +85,11 @@ turns the inner panel's LFD off (`vrr_lfd` `scalability=1`). The ROM does the sa
 (held at 120 Hz) and drops the zone outside STATE_ON, so AOD/screen-off never inherits it; the
 fold-config helper switches the inner LFD.
 
+**Samsung audio effects** (2026-09-28): the GSI loads the vendor's generic `audio_effects.xml`;
+One UI uses `audio_effects_sec.xml` (SoundBooster Plus speaker processing, SoundAlive, sa3d, Dolby
+Atmos). `fold3-early.sh` bind-mounts the `_sec` file before audioserver starts. Loud speaker
+playback no longer sounds muffled. Adapt Sound (`libmysound`) isn't on the vendor partition.
+
 Scripts run as root in TrebleDroid's `phhsu_daemon` domain (like `rw-system.sh`) and exit at once
 unless `ro.product.vendor.model` is `SM-F926*`. The module scripts in `magisk-src/` stay the single
 source; `apply.sh` copies them in.

@@ -35,4 +35,12 @@ fi
 AP_SEC=/vendor/etc/audio_policy_configuration_sec.xml
 AP_DEF=/vendor/etc/audio_policy_configuration.xml
 [ -f "$AP_SEC" ] && mount -o bind "$AP_SEC" "$AP_DEF"
+
+# Samsung's audio effects, as One UI loads them: SoundBooster Plus (speaker loudness/protection;
+# without it loud speaker playback sounds strained and muffled), SoundAlive, sa3d on music/ring/
+# alarm, Dolby Atmos (dap). All libraries are on the vendor partition except Adapt Sound's
+# libmysound (skipped with a log line).
+AE_SEC=/vendor/etc/audio_effects_sec.xml
+AE_DEF=/vendor/etc/audio_effects.xml
+[ -f "$AE_SEC" ] && mount -o bind "$AE_SEC" "$AE_DEF"
 exit 0
