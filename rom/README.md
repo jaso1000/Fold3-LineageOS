@@ -69,6 +69,13 @@ enters panel LPM (measured on the outer screen: 30 Hz).
 - `Fold3FrameworkOverlay`: `config_allowAutoBrightnessWhileDozing`; the cover-screen helper follows
   the framework's doze brightness (floor 10%; `persist.fold3.outer_aod` forces a level).
 
+**Fold behaviour** (2026-09-28): Settings > Display > "Continue using apps on fold" is shown
+(`config_fold_lock_behavior`) and defaults to "Never" (lock on fold). Android 16 decides this from
+device-state *properties*, which Samsung's `device_state_configuration.xml` doesn't have, so
+`fold3-early.sh` adds `PROPERTY_POWER_CONFIGURATION_TRIGGER_SLEEP` to CLOSE and `…_TRIGGER_WAKE` to
+HALF_FOLDED/OPEN (unfolding wakes the phone). "Swipe up to continue" isn't implemented in AOSP and
+behaves like "Always".
+
 Scripts run as root in TrebleDroid's `phhsu_daemon` domain (like `rw-system.sh`) and exit at once
 unless `ro.product.vendor.model` is `SM-F926*`. The module scripts in `magisk-src/` stay the single
 source; `apply.sh` copies them in.

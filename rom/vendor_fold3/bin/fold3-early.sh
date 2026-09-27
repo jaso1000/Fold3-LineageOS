@@ -6,12 +6,25 @@ case "$(getprop ro.product.vendor.model)" in SM-F926*) ;; *) exit 0 ;; esac
 # state on a <lid-switch> that the GSI never reports as closed, so the outer screen never takes
 # over. Use Samsung's own sec/ 6-state sensor config with every <lid-switch> condition removed
 # (same result as scripts/make-vendor-image.sh, but done at boot, so a stock vendor works).
+# Also add the Android 16 power properties Samsung's file lacks: folding to CLOSE (0) may put the
+# device to sleep (only if Settings > Display > "Continue using apps on fold" is "Never"), and
+# unfolding to HALF_FOLDED (2) / OPEN (3) wakes it, like One UI.
 SEC=/vendor/etc/devicestate/sec/device_state_configuration.xml
 DST=/vendor/etc/devicestate/device_state_configuration.xml
 FIX=/mnt/fold3/device_state_configuration.xml
+P=com.android.server.policy.PROPERTY_POWER_CONFIGURATION
 if grep -q '<lid-switch>' "$SEC" 2>/dev/null; then
     mkdir -p /mnt/fold3
-    sed '/<lid-switch>/,/<\/lid-switch>/d' "$SEC" > "$FIX"
+    sed '/<lid-switch>/,/<\/lid-switch>/d' "$SEC" | awk -v p="$P" '
+        /<identifier>/ { id = $0; gsub(/[^0-9]/, "", id); state_name = 1 }
+        { print }
+        state_name && /<\/name>/ {
+            state_name = 0
+            if (id == "0") prop = p "_TRIGGER_SLEEP"
+            else if (id == "2" || id == "3") prop = p "_TRIGGER_WAKE"
+            else prop = ""
+            if (prop != "") print "    <properties>\n      <property>" prop "</property>\n    </properties>"
+        }' > "$FIX"
     chcon u:object_r:vendor_configs_file:s0 "$FIX"
     chmod 644 "$FIX"
     mount -o bind "$FIX" "$DST"
