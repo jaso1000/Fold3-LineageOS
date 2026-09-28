@@ -132,7 +132,8 @@ test, a TWRP-flashable zip) in [notes/rom-packaging-todo.md](notes/rom-packaging
 ## Installing it yourself
 
 **Get the ROM: [latest release](https://github.com/jaso1000/Fold3-LineageOS/releases/latest)**
-(`lineage-23.2-…-UNOFFICIAL-q2q-VANILLA-EXT4.img.xz` + `.sha256`). You also need
+(`lineage-23.2-…-UNOFFICIAL-q2q-VANILLA-EXT4.img.xz`, the recovery
+`twrp-q2q-azkali-dynapatch-AP.tar.md5`, and their `.sha256` files). You also need
 [MindTheGapps](https://github.com/MindTheGapps/16.0.0-arm64/releases) (Android 16, arm64) for Google apps.
 Already unlocked with TWRP + DynaPatch? Go straight to step 3.
 
@@ -157,16 +158,30 @@ Already unlocked with TWRP + DynaPatch? Go straight to step 3.
 3. Long-press Vol Up to unlock and confirm. The phone wipes and reboots; redo the setup and
    check OEM unlocking is still on.
 
-**2. Custom recovery**
-- Azkali's Fold3 (q2q) recovery: [XDA thread](https://xdaforums.com/t/orangefox-and-twrp-recovery-recovery-for-sm-f926b.4660021/),
-  device tree on [GitLab](https://gitlab.com/azkali-samsung/q2q) (Azkali's own download page is
-  down — we used a build made with [bm0x/twrp-actions-compiler](https://github.com/bm0x/twrp-actions-compiler)).
-  Flash it (with a verification-disabled vbmeta) from Download Mode.
-- Flash [**DynaPatch**](https://xdaforums.com/t/guide-direct-flashing-gsi-image-to-logical-partitions-on-samsung-galaxy-with-dynamic-partitions.4340947/)
-  in the recovery. It adds **Install Image** support for the dynamic `system`/`vendor`
-  partitions, so no fastboot is needed.
-- The recovery **can't decrypt `/data`** on this firmware, so no recovery backups — keep the
-  stock firmware (from samloader) as your way back.
+**2. Custom recovery (TWRP)**
+
+The release includes the exact recovery this ROM was tested with:
+**`twrp-q2q-azkali-dynapatch-AP.tar.md5`**. It contains Azkali's TWRP for q2q with
+[DynaPatch](https://xdaforums.com/t/guide-direct-flashing-gsi-image-to-logical-partitions-on-samsung-galaxy-with-dynamic-partitions.4340947/)
+already applied (Install Image can write the dynamic `system`/`vendor` partitions, so no fastboot
+and no separate DynaPatch flash are needed), plus a verification-disabled `vbmeta` (generic,
+made with avbtool; no Samsung content).
+1. Check the `.sha256`, then boot to Download Mode (power off, hold **Vol Up + Vol Down**, plug in USB).
+2. **Odin (Windows):** put the file in **AP**, go to Options and **untick Auto Reboot**, then press Start.
+   **Heimdall (Linux/macOS):** `tar -xf twrp-q2q-azkali-dynapatch-AP.tar.md5`, `lz4 -d` both files, then
+   `heimdall flash --RECOVERY recovery.img --VBMETA vbmeta.img --no-reboot`.
+3. Leave Download Mode by holding **Vol Down + Power**. As soon as the screen goes black, switch to
+   **Vol Up + Power** (USB still plugged in) and hold until TWRP appears.
+
+Notes:
+- The recovery **can't decrypt `/data`** on this firmware, so no recovery backups. Keep the stock
+  firmware (from samloader) as your way back.
+- Source: Azkali's Fold3 recovery ([XDA thread](https://xdaforums.com/t/orangefox-and-twrp-recovery-recovery-for-sm-f926b.4660021/),
+  device tree on [GitLab](https://gitlab.com/azkali-samsung/q2q)), built with
+  [bm0x/twrp-actions-compiler](https://github.com/bm0x/twrp-actions-compiler) because Azkali's
+  download page is down; [TWRP](https://github.com/TeamWin) (GPLv3); Samsung's GPL kernel source is at
+  [opensource.samsung.com](https://opensource.samsung.com). Redistributed unmodified apart from
+  DynaPatch's fstab entries.
 
 **3. Flash the ROM + Google apps**
 1. Download the image from the [latest release](https://github.com/jaso1000/Fold3-LineageOS/releases/latest)

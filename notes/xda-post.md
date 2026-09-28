@@ -68,7 +68,9 @@ Full checklist, including what's untested: [URL='https://github.com/jaso1000/Fol
 Step-by-step guide (unlock, recovery, flashing the image + MindTheGapps, optional root and RCS):
 [URL='https://github.com/jaso1000/Fold3-LineageOS#installing-it-yourself']Installing it yourself[/URL]
 
-Short version, in TWRP (Azkali's q2q recovery + DynaPatch):
+Recovery: the release includes the TWRP I use (Azkali's q2q build with DynaPatch already applied, plus a verification-disabled vbmeta), [B]twrp-q2q-azkali-dynapatch-AP.tar.md5[/B]. Flash it in Odin's AP slot with Auto Reboot unticked, then hold Vol Down + Power and, when the screen goes black, Vol Up + Power to boot into TWRP.
+
+Short version, in TWRP:
 [LIST=1]
 [*]Unpack the release .img.xz on your computer
 [*]Push the .img and MindTheGapps to /tmp
