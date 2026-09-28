@@ -106,7 +106,7 @@ Don't `ctl.restart ril-daemon` to fix a slow phone start — it breaks the finge
 - ✅ Play Integrity: BASIC (with PlayIntegrityFork); DEVICE/STRONG not expected with an unlocked bootloader
 - ✅ Several reboots in a row: network, fingerprint and modules come back each time
 - ✅ Android Auto in the car, wireless
-- ☐ Android Auto over a USB cable (phone unlocked, and plugged in while locked: `fold3-desktop`'s lock-screen USB protection could get in the way)
+- ✅ Android Auto over a USB cable (needs the phone to appear as file transfer / MTP, the ROM default from build 12)
 - ✅ Overnight battery drain: about the same as stock
 - ☐ A full day of normal use without crashes or lost network
 - ☐ Alarms fire while locked / in Doze

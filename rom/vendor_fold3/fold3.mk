@@ -63,3 +63,8 @@ PRODUCT_SYSTEM_PROPERTIES += persist.dm.passive.sub_ambient_brightness=200
 # AOD: SurfaceFlinger at the panel's lowest rate while dozing (the panel itself runs AOD in its
 # low-power mode, 30 Hz cover / 1-30 Hz inner). Patch in rom/patches/platform_frameworks_base.
 PRODUCT_SYSTEM_PROPERTIES += ro.display.doze_refresh_rate=48
+
+# Wired Android Auto: head units only start AOA with a phone that enumerates like a normal phone
+# (file transfer / MTP), as One UI does by default; with "charging only" the car never tried
+# (verified 2026-09-28). MTP shows no storage while the phone is locked.
+PRODUCT_SYSTEM_PROPERTIES += persist.sys.usb.config=mtp
