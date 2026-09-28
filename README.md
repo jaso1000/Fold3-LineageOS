@@ -8,12 +8,12 @@ Device: Samsung Galaxy Z Fold3, SM-F926B (Australian variant), codename **q2q**,
 
 ## Status (updated 2026-09-28)
 
-**Latest build: [fold3-2026.09.28](https://github.com/jaso1000/Fold3-LineageOS/releases/tag/fold3-2026.09.28)**,
+**Latest build: [fold3-2026.09.28.2](https://github.com/jaso1000/Fold3-LineageOS/releases/tag/fold3-2026.09.28.2)**,
 Android security patch 2026-09-01, on Samsung's **final** firmware F926BXXSJJZH3 (Samsung ended
 Fold3 updates in September 2026). A TrebleDroid-based system image (MisterZtr's LineageOS GSI
 patches) plus this repo's Fold3 changes (`rom/`): no Magisk modules needed, root optional. Daily
-driver for the dev, including **VoLTE on Telstra/Boost**, both screens, signal bars, AOD and Android
-Auto.
+driver for the dev, including **VoLTE with HD voice on Telstra/Boost**, both screens, signal bars, AOD,
+Dolby Atmos and Android Auto.
 
 > ⚠️ **Emergency calls (000/112): untested.** SIP-level emergency tests pass on Telstra (emergency
 > data connection and registration), but the dedicated emergency call isn't implemented yet, so
@@ -126,6 +126,9 @@ The same fixes as standalone Magisk modules (for the plain GSI, before the ROM) 
 
 ## Releases and building
 
+- **2026-09-28.2** [fold3-2026.09.28.2](https://github.com/jaso1000/Fold3-LineageOS/releases/tag/fold3-2026.09.28.2):
+  callers hear you clearly (call mic level fixed), HD voice (AMR-WB), call-mic noise suppression,
+  Dolby Atmos tile, Dolby decoders for streaming apps ([notes](notes/releases/2026-09-28.2.md)).
 - **2026-09-28** [fold3-2026.09.28](https://github.com/jaso1000/Fold3-LineageOS/releases/tag/fold3-2026.09.28):
   low-brightness flicker fix, AOD 48 Hz and One UI-style AOD brightness, lock on fold, Samsung
   audio effects, Telstra IMS APN ([notes](notes/releases/2026-09-28.md)).

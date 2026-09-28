@@ -6,6 +6,7 @@ I was almost going to pull the trigger on upgrading my aging z fold 3 for a pixe
 I had pretty good success so far and given the lack of development for this device I figured I'd share all the fixes I've worked through.
 
 [B]Update (2026-09-28):[/B] it's now a proper ROM built from source with all the fixes baked in, and there's a downloadable release. No Magisk modules needed anymore, root is optional.
+[B]Update (2026-09-28.2):[/B] calls are now in HD voice, and people can finally hear you properly (the call mic level was about 40 dB too low). Also added a Dolby Atmos quick settings tile and Dolby audio for streaming apps.
 
 Full disclosure: AI was used heavily to get to this point and all text below this point is AI generated too!
 
@@ -16,7 +17,7 @@ Jason
 
 [URL='https://github.com/jaso1000/Fold3-LineageOS']github.com/jaso1000/Fold3-LineageOS[/URL]
 
-[B]Download:[/B] [URL='https://github.com/jaso1000/Fold3-LineageOS/releases']latest release[/URL] (currently [URL='https://github.com/jaso1000/Fold3-LineageOS/releases/tag/fold3-2026.09.28']fold3-2026.09.28[/URL])
+[B]Download:[/B] [URL='https://github.com/jaso1000/Fold3-LineageOS/releases']latest release[/URL] (currently [URL='https://github.com/jaso1000/Fold3-LineageOS/releases/tag/fold3-2026.09.28.2']fold3-2026.09.28.2[/URL])
 
 [SIZE=5][B]What this is (right now)[/B][/SIZE]
 An unofficial LineageOS 23.2 (Android 16) system image built from source:
@@ -34,12 +35,13 @@ An unofficial LineageOS 23.2 (Android 16) system image built from source:
 [*]Adaptive refresh 48–120 Hz, with One UI's low-brightness anti-flicker behaviour
 [*]Always-on display in Samsung's low-power mode (inner 1–30 Hz, cover 30 Hz), brightness steps like One UI, double tap to wake from AOD, turns off in a pocket
 [*]Signal bars
-[*]VoLTE calls in and out (patched phh Floss IMS): caller ID, two-way audio, keypad tones, speaker, Bluetooth, calls from the call log
+[*]VoLTE calls in and out in [B]HD voice[/B] (AMR-WB, patched phh Floss IMS): clear mic level, caller ID, keypad tones, speaker, Bluetooth, calls from the call log
 [*]SMS and MMS over IMS, RCS in Google Messages (with Magisk + Play Integrity Fix)
 [*]Mobile data, 5G, Wi-Fi, Bluetooth, hotspot, GPS
 [*]All cameras: main, ultra-wide, 2x telephoto, inner under-display selfie, cover selfie
 [*]Flex mode in apps (e.g. YouTube half-folded)
-[*]Fingerprint, storage, speakers with Samsung's SoundBooster / SoundAlive / Dolby effects, USB-C headphones, haptics, wireless charging
+[*]Fingerprint, storage, speakers with Samsung's SoundBooster / SoundAlive effects, USB-C headphones, haptics, wireless charging
+[*]Dolby Atmos quick settings tile, and Dolby audio (Dolby Digital Plus / Atmos, AC-4) in apps like Netflix and Disney+
 [*]USB-C dock with Android 16 desktop mode on an external monitor
 [*]Android Auto, wired and wireless
 [*]Google sign-in, Play Store, YouTube and so on
@@ -93,7 +95,7 @@ How each fix works: [URL='https://github.com/jaso1000/Fold3-LineageOS/blob/maste
 [SIZE=5][B]Credits[/B][/SIZE]
 [LIST]
 [*][URL='https://github.com/MisterZtr/LineageOS_gsi']MisterZtr[/URL] for the LineageOS GSI, and [URL='https://github.com/TrebleDroid/treble_experimentations']TrebleDroid / phhusson[/URL] for the GSI work and [URL='https://github.com/phhusson/ims']Floss IMS[/URL]
-[*]Azkali for the [URL='https://xdaforums.com/t/orangefox-and-twrp-recovery-recovery-for-sm-f926b.4660021/']Fold3 recovery[/URL]
+[*]Azkali for the [URL='https://xdaforums.com/t/orangefox-and-twrp-recovery-recovery-for-sm-f926b.4660021/']Fold3 recovery[/URL] ([URL='https://gitlab.com/azkali-samsung/q2q']device tree[/URL]) and [URL='https://github.com/TeamWin']TWRP[/URL]
 [*]The [URL='https://xdaforums.com/t/guide-direct-flashing-gsi-image-to-logical-partitions-on-samsung-galaxy-with-dynamic-partitions.4340947/']DynaPatch[/URL] author
 [*]topjohnwu for [URL='https://github.com/topjohnwu/Magisk']Magisk[/URL] and [URL='https://github.com/topjohnwu/samloader-rs']samloader-rs[/URL]
 [*][URL='https://github.com/MindTheGapps']MindTheGapps[/URL], osm0sis for [URL='https://github.com/osm0sis/PlayIntegrityFork']PlayIntegrityFork[/URL]
