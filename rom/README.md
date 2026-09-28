@@ -90,9 +90,9 @@ One UI uses `audio_effects_sec.xml` (SoundBooster Plus speaker processing, Sound
 Atmos). `fold3-early.sh` bind-mounts the `_sec` file before audioserver starts. Loud speaker
 playback no longer sounds muffled. Adapt Sound (`libmysound`) isn't on the vendor partition.
 
-**Wired Android Auto** (2026-09-28): the car never started Android Open Accessory while the phone
-enumerated as "charging only"/ADB; with file transfer (MTP), like One UI's default, it switches to
-accessory mode and Android Auto starts. `persist.sys.usb.config=mtp`.
+**Wired Android Auto** (2026-09-28): works (phone switches to accessory mode, audio streams). The
+first failures were the car's head unit. The ROM still defaults USB to file transfer (MTP) like One
+UI (`persist.sys.usb.config=mtp`), since some head units want it.
 
 Scripts run as root in TrebleDroid's `phhsu_daemon` domain (like `rw-system.sh`) and exit at once
 unless `ro.product.vendor.model` is `SM-F926*`. The module scripts in `magisk-src/` stay the single
