@@ -1,23 +1,29 @@
 # LineageOS on Galaxy Z Fold3 (SM-F926B, "q2q")
 
-Getting LineageOS (Android 16 GSI) running as a daily driver on a Samsung Galaxy Z Fold3, working
-toward a packaged ROM later.
+Unofficial LineageOS 23.2 (Android 16) for the Samsung Galaxy Z Fold3, built from source with the
+Fold3 fixes built in. **Download: [Releases](https://github.com/jaso1000/Fold3-LineageOS/releases)**
+(install steps below).
 
 Device: Samsung Galaxy Z Fold3, SM-F926B (Australian variant), codename **q2q**, Snapdragon 888 (SM8350).
 
-## Status: Android 16 daily driver (updated 2026-09-26)
+## Status (updated 2026-09-28)
 
-Running on Samsung's **final** Fold3 firmware, F926BXXSJJZH3 (August 2026 patch). Samsung ended
-all updates for the Fold3 in September 2026.
+**Latest build: [fold3-2026.09.28](https://github.com/jaso1000/Fold3-LineageOS/releases/tag/fold3-2026.09.28)**,
+Android security patch 2026-09-01, on Samsung's **final** firmware F926BXXSJJZH3 (Samsung ended
+Fold3 updates in September 2026). A TrebleDroid-based system image (MisterZtr's LineageOS GSI
+patches) plus this repo's Fold3 changes (`rom/`): no Magisk modules needed, root optional. Daily
+driver for the dev, including **VoLTE on Telstra/Boost**, both screens, signal bars, AOD and Android
+Auto.
 
-LineageOS 23.2 (Android 16) TrebleDroid GSI, **now built from source by this project** (2026-09-26 build,
-September 2026 security patch; see "Next: a real ROM build") + MindTheGapps, rooted with Magisk, on the stock
-Samsung Android 15 vendor (`F926BXXSJJZH3`). Nearly everything works, including **VoLTE calls on
-Telstra/Boost** and both screens. Fixes are delivered as small Magisk modules (ready-made zips in
-[`prebuilt/`](prebuilt/), sources in `magisk-src/` and `scripts/`, the patched VoLTE app in
-[`floss-ims/`](floss-ims/)); the root-cause writeups are in
-[notes/procedure.md](notes/procedure.md), and what still has to happen for a real ROM build is in
-[notes/rom-packaging-todo.md](notes/rom-packaging-todo.md).
+> ⚠️ **Emergency calls (000/112): untested.** SIP-level emergency tests pass on Telstra (emergency
+> data connection and registration), but the dedicated emergency call isn't implemented yet, so
+> 000 is sent as a normal VoLTE call, and no real emergency call has been made. **Don't rely on
+> this phone for emergencies; keep another phone available.**
+
+How each fix is built into the ROM: [rom/README.md](rom/README.md). Root-cause writeups:
+[notes/procedure.md](notes/procedure.md). Plan and to-do: [notes/rom-packaging-todo.md](notes/rom-packaging-todo.md).
+The table below is the original Magisk-module version of each fix (`magisk-src/`, `prebuilt/`),
+kept for reference; the ROM contains all of them.
 
 ### Fixes in place
 
@@ -54,7 +60,7 @@ Don't `ctl.restart ril-daemon` to fix a slow phone start — it breaks the finge
 - ✅ Incoming calls: ring, caller ID, answer, audio both ways, hang up from either side
 - ✅ Incoming call with screen off / locked; decline; missed-call log
 - ☐ Calls still work after 1–2+ h idle (re-registration fix)
-- ⚠️ **Emergency calls (000/112): treat as NOT working.** Android routes 000 to VoLTE (Floss), but Floss has no emergency support (no emergency PDN, emergency registration or `urn:service:sos`). It goes out as a normal call, and whether Telstra connects it can't be tested safely. There's no 3G fallback in Australia. **Keep a stock phone for emergencies.** Groundwork done and verified (emergency PDN + emergency registration); the emergency call itself (INVITE `urn:service:sos`) isn't written yet (paused; see notes/procedure.md).
+- ⚠️ **Emergency calls (000/112): untested** (see the warning at the top). Emergency data connection + emergency registration verified on Telstra; the emergency call itself (INVITE `urn:service:sos`) isn't written, so 000 goes out as a normal VoLTE call. Never test by dialling 000.
 - ☐ Call waiting, hold/swap, merge into conference
 - ☐ Voicemail notification (new-voicemail indicator)
 - ☐ Wi-Fi calling (likely unsupported by Floss)
@@ -81,12 +87,13 @@ Don't `ctl.restart ril-daemon` to fix a slow phone start — it breaks the finge
 - ✅ Always-on display on both screens in Samsung's low-power panel mode (ROM: real doze + HLPM `alpm` mode; brightness follows auto-brightness via Samsung's AOD table)
 - ✅ Pocket: AOD turns off while the proximity sensor is covered (ROM build 7, Samsung proximity sensor; there's no standard one). "Prevent accidental wake-up" is on by default (not yet tested separately)
 - ✅ Half-fold doesn't glitch
-- ✅ Adaptive refresh 48–120 Hz (ROM: the framework's 60 Hz default cap removed; minimum refresh can stay at default)
+- ✅ Adaptive refresh 48–120 Hz; holds 120 Hz only when dim in a dim room (One UI's thresholds per screen) to avoid low-brightness flicker; AOD at 48 Hz
+- ✅ Lock on fold / wake on unfold (Settings → Display → "Continue using apps on fold", default "Never")
 - ✅ Flex mode in apps (YouTube half-folded)
 - ⚠️ Samsung logo stays on the cover screen after an **unfolded** boot until the first fold (the bootloader leaves the unused panel lit). **Boot folded** and it clears. A SurfaceFlinger power-cycle attempt (ROM build 7) didn't fix the unfolded case; low priority. Fold once after booting unfolded to avoid OLED retention.
 
 **Audio, camera & media**
-- ✅ Speakers / media playback, microphone, screen recording, volume keys
+- ✅ Speakers / media playback (Samsung's SoundBooster / SoundAlive / Dolby effects loaded, loud playback clear), microphone, screen recording, volume keys
 - ✅ Rear main camera, inner (under-display) selfie, cover-screen selfie, flashlight
 - ✅ Ultra-wide and telephoto: photos from every lens, video recording with sound
 - ✅ USB-C (digital) headphones: playback, mic, inline volume buttons; known ones work when plugged in while locked
@@ -105,26 +112,24 @@ Don't `ctl.restart ril-daemon` to fix a slow phone start — it breaks the finge
 - ✅ Google sign-in, Play Store installs (Messages, YouTube)
 - ✅ Play Integrity: BASIC (with PlayIntegrityFork); DEVICE/STRONG not expected with an unlocked bootloader
 - ✅ Several reboots in a row: network, fingerprint and modules come back each time
-- ✅ Android Auto in the car, wireless
 - ✅ Android Auto over a USB cable (and wireless)
 - ✅ Overnight battery drain: about the same as stock
 - ☐ A full day of normal use without crashes or lost network
 - ☐ Alarms fire while locked / in Doze
 - ⚠️ Banking apps / Wallet tap-to-pay: not used on this phone. Many banks' terms forbid modified or rooted OSes, and an unlocked bootloader only gets BASIC integrity. Keep banking on a stock, updated phone.
 
-## Next: a real ROM build
+## Releases and building
 
-**First build released 2026-09-26:** [fold3-2026.09.26](https://github.com/jaso1000/Fold3-LineageOS/releases/tag/fold3-2026.09.26)
-(system image with the Fold3 fixes built in, Sep 2026 security patch; notes in
-[notes/releases/2026-09-26.md](notes/releases/2026-09-26.md)). Emergency calls still don't work.
+- **2026-09-28** [fold3-2026.09.28](https://github.com/jaso1000/Fold3-LineageOS/releases/tag/fold3-2026.09.28):
+  low-brightness flicker fix, AOD 48 Hz and One UI-style AOD brightness, lock on fold, Samsung
+  audio effects, Telstra IMS APN ([notes](notes/releases/2026-09-28.md)).
+- **2026-09-26** [fold3-2026.09.26](https://github.com/jaso1000/Fold3-LineageOS/releases/tag/fold3-2026.09.26):
+  first build ([notes](notes/releases/2026-09-26.md)).
 
-The Magisk-module setup is feature-complete for daily use. What's left needs Android's own code
-changed, so the next step is building the ROM from source: **LineageOS 23.2 TrebleDroid GSI source
-+ this repo's fixes baked in**, on a Windows desktop under WSL2. It will fix signal bars, the
-outer-screen boot logo, the fingerprint boot race, the phone app's slow start and adaptive 120 Hz,
-add a built-in Play Integrity spoof (RCS without root), and need no root. The plan, milestones and
-full to-do list are in [notes/rom-packaging-todo.md](notes/rom-packaging-todo.md). Releases will go to
-this repo's GitHub Releases.
+Built on a Windows desktop under WSL2: LineageOS 23.2 + MisterZtr's `treble_manifest` and patches,
+then `rom/apply.sh` (our patches and `vendor/fold3`), `breakfast lineage_arm64_bvN4-bp4a-userdebug &&
+make systemimage`. Details in [rom/README.md](rom/README.md); open items (emergency calls, clean-install
+test, a TWRP-flashable zip) in [notes/rom-packaging-todo.md](notes/rom-packaging-todo.md).
 
 ## Installing it yourself
 
@@ -160,43 +165,38 @@ this repo's GitHub Releases.
 - The recovery **can't decrypt `/data`** on this firmware, so no recovery backups — keep the
   stock firmware (from samloader) as your way back.
 
-**3. System (GSI) + Google apps**
-1. Download the LineageOS 23.2 **VANILLA EXT4** GSI from
-   [MisterZtr/LineageOS_gsi](https://github.com/MisterZtr/LineageOS_gsi/releases) and grow the
-   image (`truncate -s +1700M system.img && e2fsck -f system.img && resize2fs system.img`) so the
-   GApps installer has room.
-2. `adb push` it to `/tmp` in recovery → Install → Install Image → **System**.
-3. Install [MindTheGapps](https://github.com/MindTheGapps/16.0.0-arm64/releases) for Android 16 (arm64)
-   as a normal zip (verified 2026-09-26 on the self-built GSI; includes an Android Auto stub — update it
-   from the Play Store). [BiTGApps](https://bitgapps.io) **Core** also works but needs the GSF permission
-   grants and `fold3-android-auto`.
-   (MindTheGapps' setup wizard hangs on this phone.)
-4. **Format Data**, reboot.
+**3. Flash the ROM + Google apps**
+1. Download the latest `lineage-23.2-…-UNOFFICIAL-q2q-VANILLA-EXT4.img.xz` from
+   [Releases](https://github.com/jaso1000/Fold3-LineageOS/releases) and check its `.sha256`.
+   Unpack it on your computer (`xz -d …img.xz`, or 7-Zip on Windows). It's already enlarged for GApps.
+2. Download [MindTheGapps](https://github.com/MindTheGapps/16.0.0-arm64/releases) for Android 16 (arm64).
+3. In TWRP: `adb push lineage-….img /tmp/` and `adb push MindTheGapps-….zip /tmp/`.
+4. Install → **Install Image** → the `.img` → **System**; then Install → **Install Zip** → MindTheGapps.
+5. **Fresh install:** Wipe → **Format Data**. **Updating from an earlier build:** skip this, data is kept.
+6. Reboot. The stock JJZH3 vendor is fine (the dual-screen fix is built in; the patched vendor
+   image from older guides isn't needed).
 
-**4. Dual-screen vendor fix**
-Extract the stock `vendor.img` from the JJZH3 AP (`super.img.lz4` → `lz4 -d` → `simg2img` →
-`lpunpack -p vendor`), then run `scripts/make-vendor-image.sh vendor.img vendor-patched.img`. That
-replaces `/vendor/etc/devicestate/device_state_configuration.xml` with Samsung's own `sec/` version
-**with every `<lid-switch>` condition removed**. Flash it from TWRP (Install Image → Vendor, or
-`dd` to `/dev/block/mapper/vendor`). Details: [notes/procedure.md](notes/procedure.md#dual-screen-switching-vendor-edit).
+**4. Optional: root, RCS**
+1. Root: extract `boot.img` from the **exact** firmware your phone runs (samloader), patch it with
+   [Magisk](https://github.com/topjohnwu/Magisk), flash via Install Image → Boot. (A boot.img from any
+   other firmware version fails Samsung's "Secure check".)
+2. RCS: enable Zygisk in Magisk, install [PlayIntegrityFork](https://github.com/osm0sis/PlayIntegrityFork)
+   and run its action (`autopif4.sh`; the Pixel profile expires every ~6 weeks, re-run then). Install
+   Google Messages + Carrier Services, enter your number in Messages → Settings → Advanced → Phone
+   number (the SIM doesn't carry it), then toggle RCS chats off/on.
 
-**5. Root + fixes**
-1. Extract `boot.img` from the **exact** firmware your phone runs (samloader), patch it with
-   [Magisk](https://github.com/topjohnwu/Magisk), flash via Install Image → Boot, open the Magisk
-   app once. (A boot.img from any other firmware version fails Samsung's "Secure check".)
-2. Install this repo's Magisk modules: the zips in [`prebuilt/`](prebuilt/) (or rebuild them with
-   `scripts/make-*-module.sh`), plus `fold3-media-c2-seccomp`, which you build from your own phone
-   with `scripts/make-media-c2-seccomp-module.sh`, and (for Android Auto, after installing it from Play)
-   `fold3-android-auto` via `scripts/make-android-auto-module.sh`. Then do the manual steps listed in the table (GSF permissions, IMS APN +
-   `carrier_volte_available`, disabling `SafetySourceReceiver`).
-3. Calls: the Floss IMS module + carrier setup in
-   [notes/procedure.md](notes/procedure.md#volte-calls--module-fold3-floss-ims--manual-carrier-setup).
-   Carriers other than Telstra/Boost are untested.
-4. RCS (optional): enable Zygisk in Magisk, install
-   [PlayIntegrityFork](https://github.com/osm0sis/PlayIntegrityFork) and run its action
-   (`autopif4.sh`) to fetch a current Pixel beta profile (expires every ~6 weeks; re-run then).
-   Install Google Messages + Carrier Services, enter your number in Messages → Settings →
-   Advanced → Phone number (the SIM doesn't carry it), then toggle RCS chats off/on.
+**Calls on other carriers:** VoLTE uses the built-in Floss IMS. Telstra/Boost work out of the box;
+other carriers need an IMS APN (Settings → Network & internet → SIMs → Access Point Names → **+**,
+APN `ims`, type `ims`, protocol IPv4/IPv6) and VoLTE enabled in their carrier config, and are
+untested. Mobile data and MMS use LineageOS's APN list.
+
+<details><summary>Older method: MisterZtr's GSI + this repo's Magisk modules (before the ROM build)</summary>
+
+Flash MisterZtr's LineageOS 23.2 VANILLA EXT4 GSI, the patched vendor from
+`scripts/make-vendor-image.sh`, a Magisk-patched boot.img, then the zips in [`prebuilt/`](prebuilt/)
+plus `fold3-media-c2-seccomp` (`scripts/make-media-c2-seccomp-module.sh`) and the manual carrier
+steps in [notes/procedure.md](notes/procedure.md). Superseded by the ROM releases.
+</details>
 
 ## Tooling
 
@@ -207,7 +207,8 @@ replaces `/vendor/etc/devicestate/device_state_configuration.xml` with Samsung's
 - Floss build SDK: `build/src/floss-sdk` (android-33 platform with MmTelFeature stripped, build-tools 34).
 - Prototypes kept for the ROM build: `tools/seh-signal/` (signal bars via Samsung ISehRadio),
   `tools/fp-active-group/` (fingerprint setActiveGroup).
-- Laptop: Surface, Arch Linux (Omarchy). ROM build machine: Windows desktop with WSL2 (planned).
+- ROM: `rom/` (apply.sh, vendor_fold3, patches). Stock-firmware analysis: `scripts/lpunpack.py`, `tools/sensor-probe/`.
+- Laptop: Surface, Arch Linux (Omarchy). ROM build machine: Windows desktop with WSL2.
 
 ## References
 
