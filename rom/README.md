@@ -90,6 +90,21 @@ One UI uses `audio_effects_sec.xml` (SoundBooster Plus speaker processing, Sound
 Atmos). `fold3-early.sh` bind-mounts the `_sec` file before audioserver starts. Loud speaker
 playback no longer sounds muffled. Adapt Sound (`libmysound`) isn't on the vendor partition.
 
+**Dolby Atmos tile** (`vendor_fold3/Fold3Dolby`): the config above only registers Dolby's effect
+(`dap_proxy`, DAX3 in `libswdap`, tuning in `/vendor/etc/dolby/dax-default.xml`); One UI turns it
+on from its own Sound quality and effects app, which a GSI doesn't have. Fold3Dolby is a small
+persistent platform app with a Quick Settings tile that holds the effect
+(`9d4921da-8225-4f29-aefa-39537a04bcaa`) on the global output mix and switches it with Dolby's
+enable parameter, as the DolbyAudioEffect class in LineageOS device trees does. Off by default
+(like One UI); the setting survives reboots, and the effect is re-created if audioserver restarts.
+Test tool: `tools/dolby-probe/`.
+
+**Dolby decoders** (AC-3, E-AC-3 incl. Atmos/JOC, AC-4): Samsung's software codec service ships
+them (`c2.dolby.*`), but Android only lists codecs named in the codec XML, and
+`media_codecs_lahaina.xml` doesn't include `media_codecs_dolby_audio.xml` (One UI adds it in its
+framework). `fold3-early.sh` bind-mounts a copy with the include, so streaming apps can use Dolby
+audio. Check with `tools/dolby-probe/CodecList.java`.
+
 **Wired Android Auto** (2026-09-28): works (phone switches to accessory mode, audio streams). The
 first failures were the car's head unit. USB mode stays at the Android default (no MTP default).
 

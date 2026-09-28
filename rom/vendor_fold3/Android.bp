@@ -44,3 +44,15 @@ android_app_import {
         enabled: false,
     },
 }
+
+// Dolby Atmos Quick Settings tile (Samsung's DAX3 effect on the global output mix).
+android_app {
+    name: "Fold3Dolby",
+    srcs: ["Fold3Dolby/src/**/*.java"],
+    resource_dirs: ["Fold3Dolby/res"],
+    manifest: "Fold3Dolby/AndroidManifest.xml",
+    platform_apis: true,
+    certificate: "platform",
+    privileged: true,
+    system_ext_specific: true,
+}

@@ -43,4 +43,17 @@ AP_DEF=/vendor/etc/audio_policy_configuration.xml
 AE_SEC=/vendor/etc/audio_effects_sec.xml
 AE_DEF=/vendor/etc/audio_effects.xml
 [ -f "$AE_SEC" ] && mount -o bind "$AE_SEC" "$AE_DEF"
+
+# Dolby decoders (AC-3, E-AC-3 incl. Atmos/JOC, AC-4): Samsung's codec service has them, but the
+# codec list the GSI reads (media_codecs_lahaina.xml) doesn't include Dolby's codec file, so apps
+# (Netflix, Disney+, Plex...) never see them. One UI adds it in its framework; add the include.
+MC=/vendor/etc/media_codecs_lahaina.xml
+MC_FIX=/mnt/fold3/media_codecs_lahaina.xml
+if [ -f /vendor/etc/media_codecs_dolby_audio.xml ] && ! grep -q dolby_audio "$MC" 2>/dev/null; then
+    mkdir -p /mnt/fold3
+    sed 's|<Include href="media_codecs_vendor_audio.xml" />|&\n    <Include href="media_codecs_dolby_audio.xml" />|' "$MC" > "$MC_FIX"
+    chcon u:object_r:vendor_configs_file:s0 "$MC_FIX"
+    chmod 644 "$MC_FIX"
+    mount -o bind "$MC_FIX" "$MC"
+fi
 exit 0

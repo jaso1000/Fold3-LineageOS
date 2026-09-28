@@ -9,7 +9,8 @@ PRODUCT_PACKAGES += \
     Fold3ApertureOverlay \
     Fold3LineageOverlay \
     Fold3SystemUIOverlay \
-    FlossIms
+    FlossIms \
+    Fold3Dolby
 
 # Boot scripts (copied from magisk-src/ by rom/apply.sh) + init
 PRODUCT_COPY_FILES += \

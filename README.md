@@ -40,6 +40,8 @@ Details of every fix: [rom/README.md](rom/README.md) (how it's built into the RO
 | No 120 Hz unless forced; flicker when dim | Framework's 60 Hz default cap; Samsung panels shift colour at low brightness below 120 Hz | Adaptive 48–120 Hz; holds 120 Hz only when dim in a dim room (One UI's thresholds per screen); AOD at 48 Hz |
 | Folding doesn't lock | Samsung's device-state config lacks Android 16's sleep/wake properties | Added at boot; Settings → Display → "Continue using apps on fold" (default "Never") |
 | Muffled speaker; USB-C headphones silent | GSI loads the vendor's generic audio effects/policy | Samsung's `audio_effects_sec.xml` (SoundBooster, SoundAlive, Dolby) and `audio_policy_configuration_sec.xml` |
+| No Dolby Atmos switch | One UI's Sound quality and effects app isn't in a GSI | "Dolby Atmos" Quick Settings tile drives Samsung's Dolby effect (off by default, like stock) |
+| No Dolby audio in streaming apps | Samsung's Dolby decoders aren't in the codec list the GSI reads | Codec list includes Samsung's Dolby decoders (AC-3, E-AC-3/Atmos, AC-4) |
 | Hotspot "connected, no internet" | Tethering never starts a DNS proxy | Hotspot DNS redirected to 8.8.8.8 |
 | USB-C dock only charges, then only mirrors | Samsung's USB lock state stays "restricted"; desktop flags off | One UI-style USB lock handling; Android 16 desktop mode on external monitors |
 | Phone app ANR loop at boot | Phone blocks on rild's slow start | `SafetySourceReceiver` disabled at boot (mitigation) |
@@ -93,6 +95,8 @@ The same fixes as standalone Magisk modules (for the plain GSI, before the ROM) 
 
 **Audio, camera & media**
 - ✅ Speakers / media playback (Samsung's SoundBooster / SoundAlive / Dolby effects loaded, loud playback clear), microphone, screen recording, volume keys
+- ✅ Dolby Atmos Quick Settings tile switches Samsung's Dolby effect (tested as an installed app); ☐ in a ROM build
+- ✅ Dolby decoders listed for apps (live test); ☐ Dolby audio in a streaming app
 - ✅ Rear main camera, inner (under-display) selfie, cover-screen selfie, flashlight
 - ✅ Ultra-wide and telephoto: photos from every lens, video recording with sound
 - ✅ USB-C (digital) headphones: playback, mic, inline volume buttons; known ones work when plugged in while locked

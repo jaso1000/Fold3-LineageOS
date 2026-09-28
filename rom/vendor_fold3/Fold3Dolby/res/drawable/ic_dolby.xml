@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generic "surround sound" glyph (two facing arcs around a dot); not Dolby's logo. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="?android:attr/colorControlNormal">
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M12,9.5a2.5,2.5 0,1 0,0 5a2.5,2.5 0,1 0,0 -5zM6.34,6.34L4.93,4.93C3.12,6.74 2,9.24 2,12s1.12,5.26 2.93,7.07l1.41,-1.41C4.9,16.21 4,14.21 4,12s0.9,-4.21 2.34,-5.66zM19.07,4.93l-1.41,1.41C19.1,7.79 20,9.79 20,12s-0.9,4.21 -2.34,5.66l1.41,1.41C20.88,17.26 22,14.76 22,12s-1.12,-5.26 -2.93,-7.07zM9.17,9.17L7.76,7.76C6.67,8.84 6,10.34 6,12s0.67,3.16 1.76,4.24l1.41,-1.41C8.45,14.1 8,13.1 8,12s0.45,-2.1 1.17,-2.83zM16.24,7.76l-1.41,1.41C15.55,9.9 16,10.9 16,12s-0.45,2.1 -1.17,2.83l1.41,1.41C17.33,15.16 18,13.66 18,12s-0.67,-3.16 -1.76,-4.24z" />
+</vector>
