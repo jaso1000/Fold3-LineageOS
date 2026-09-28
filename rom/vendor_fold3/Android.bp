@@ -1,5 +1,5 @@
-// Fold3 ROM additions. Overlay sources and the Floss APK are copied in by rom/apply.sh
-// from overlays/ and prebuilt/fold3-floss-ims.zip.
+// Fold3 ROM additions. Overlay sources and the Floss IMS source are copied in by rom/apply.sh
+// from overlays/ and floss-ims/ (Floss is built from source: module PhhIms in floss-ims/).
 
 runtime_resource_overlay {
     name: "Fold3FrameworkOverlay",
@@ -31,18 +31,6 @@ runtime_resource_overlay {
     sdk_version: "current",
     manifest: "overlays/Fold3SystemUIOverlay/AndroidManifest.xml",
     resource_dirs: ["overlays/Fold3SystemUIOverlay/res"],
-}
-
-// phh's Floss IMS with our Telstra patches (source: floss-ims/, patches/floss-ims/). Privileged,
-// not android.uid.system; permissions in privapp-permissions-me.phh.ims.xml.
-android_app_import {
-    name: "FlossIms",
-    apk: "prebuilt/FlossIms/FlossIms.apk",
-    privileged: true,
-    certificate: "platform",
-    dex_preopt: {
-        enabled: false,
-    },
 }
 
 // Dolby Atmos Quick Settings tile (Samsung's DAX3 effect on the global output mix).

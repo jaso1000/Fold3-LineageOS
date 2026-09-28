@@ -20,7 +20,7 @@ bash ~/Projects/Fold3-LineageOS/rom/apply.sh .    # ours (re-runnable)
 | `fold3-media-c2-seccomp` | already upstream in TrebleDroid `rw-system.sh` (2026-07-26) |
 | `fold3-usb-audio` | `fold3-early.sh` (same bind mount) |
 | `fold3-fold-config` overlays, display config, camera-id prop, helper | RROs `Fold3FrameworkOverlay` / `Fold3ApertureOverlay`, product displayconfig, system prop, service `fold3_fold_config` |
-| `fold3-floss-ims` + `persist.sys.phh.ims.floss` | priv-app `FlossIms` + privapp permissions + system prop; hidden-API exemption in `fold3-boot.sh` |
+| `fold3-floss-ims` + `persist.sys.phh.ims.floss` | priv-app `PhhIms` built from `floss-ims/` (Soong, HD voice) + privapp permissions + system prop; hidden-API exemption in `fold3-boot.sh` |
 | `fold3-net-fixes` | `fold3-boot.sh` |
 | `fold3-desktop` | service `fold3_desktop` + system prop; USB device list moves to `/data/misc/fold3/usb-history` |
 | `fold3-fingerprint-fix` | service `fold3_fingerprint` (started at post-fs-data), dex in `/system/etc/fold3` |
@@ -36,6 +36,9 @@ Milestone 3 (framework) fixes, also applied by `apply.sh`:
 | Samsung logo stays on the screen not in use | **Quirk**: boot folded to avoid it. `patches/platform_frameworks_native` 0002 (SurfaceFlinger power-cycles an internal panel whose first power request is OFF) didn't fix the unfolded boot |
 
 | VoLTE off after a flash (`carrier_volte_available` override lost; `cmd phone cc` is refused while PlayIntegrityFork reports a user build) | `patches/packages_apps_CarrierConfig`: VoLTE available for Telstra (1345) and Boost (2503, new) |
+| Callers say you're hard to hear: Telecom puts an outgoing call in `MODE_IN_CALL` the moment it's dialled, Samsung's audio HAL starts its modem voice path (`voicemmode1-call`) and keeps it for the whole call, and Floss's AP mic capture gets ~35-40 dB less signal (speech rms ~50 vs ~2,500 on the VoIP path) | `config_use_voip_mode_for_ims` in the framework overlay + `patches/packages_services_Telephony` 0001: the SIM account carries `EXTRA_ALWAYS_USE_VOIP_AUDIO_MODE` while IMS voice is available, so calls start in `MODE_IN_COMMUNICATION`; a call that ends up on the modem is switched back by TelephonyConnection |
+| Narrowband (AMR 8 kHz) calls only | Floss built from source with HD voice: AMR-WB (16 kHz) offered first with AMR fallback, the network's choice followed, all AMR/AMR-WB modes packed per RFC 4867, 16 kHz DTMF (`floss-ims/.../sip/Amr.kt`, `SipHandler.kt`). Telstra picks AMR-WB 12.65 kbit/s. Off switch: `persist.fold3.ims.amrwb=false` |
+| Call mic without noise suppression since Samsung's effects file (it only has AEC on `voice_communication`; One UI's call path is in the modem) | `fold3-early.sh` adds the generic file's `ns` back on `voice_communication` |
 
 Still manual: the IMS APN (kept in data across flashes). Not done: phone app slow start (root
 cause), built-in Play Integrity spoof (use PlayIntegrityFork).

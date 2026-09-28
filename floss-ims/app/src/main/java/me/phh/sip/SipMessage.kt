@@ -95,7 +95,7 @@ open class SipCommonMessage(
     override val body: ByteArray = ByteArray(0),
     private val autofill: Boolean = true,
 ) : SipMessage() {
-    override val headers: SipHeadersMap
+    final override val headers: SipHeadersMap
     init {
         headers = if (autofill) completeHeaders() else headersParam
     }

@@ -30,7 +30,9 @@ Details of every fix: [rom/README.md](rom/README.md) (how it's built into the RO
 | No display switching on fold; outer screen stuck | `<lid-switch>` condition in Samsung's device-state config is never true on the GSI | Boot script mounts Samsung's `sec/` device-state config without `<lid-switch>` (stock vendor works) |
 | Outer touchscreen dead | GSI tells Samsung's miscpower HAL "main display only" | Framework patch: `setInteractiveAsync(…, -1)` (all panels) |
 | No storage/media/fingerprint at boot | Samsung Codec2 HAL killed by its seccomp policy (`mremap`) | Already fixed upstream in TrebleDroid |
-| No calls (Telstra has no 3G) | No IMS stack usable with Samsung's vendor | phh's Floss IMS, **patched** (Telstra call/SMS fixes), built in as a privileged app; VoLTE carrier config for Telstra/Boost; Telstra IMS APN |
+| No calls (Telstra has no 3G) | No IMS stack usable with Samsung's vendor | phh's Floss IMS, **patched** (Telstra call/SMS fixes) and built from source, as a privileged app; VoLTE carrier config for Telstra/Boost; Telstra IMS APN |
+| Callers can hardly hear you | Outgoing calls start in the modem's call audio mode; Samsung's audio chip then keeps the mic on the modem path and the IMS app gets ~40 dB less signal | Calls start in VoIP audio mode while VoLTE is up (telephony patch + overlay); noise suppression on the call mic |
+| Calls only in narrowband (non-HD) | Floss IMS only spoke AMR 8 kHz | **HD voice** (AMR-WB 16 kHz) with automatic AMR fallback |
 | Signal bars always 0 | With TrebleDroid's `ISehRadio` registration, Samsung's RIL stops filling the standard signal report | Registration skipped (`ro.telephony.samsung_sehradio=false`); real signal strength |
 | Fingerprint enrollment lost at boot | Samsung's HAL loses its active user; the framework's cleanup then deletes the enrollment | Framework sets the active group on every HAL connection; boot service re-sends it after rild restarts |
 | Cover selfie shows the inner camera; no Flex mode; no ultra-wide/tele | No fold states in the GSI; Samsung hides aux lenses | Framework overlay with fold states/postures/hinge; Samsung camera ids + Aperture overlay |
@@ -55,7 +57,9 @@ The same fixes as standalone Magisk modules (for the plain GSI, before the ROM) 
 
 **Calls & messaging**
 - ✅ Outgoing calls (voicemail, local and +61 numbers incl. call-log callbacks), audio both ways, clean hang-up
-- ✅ Keypad tones (DTMF) in calls
+- ✅ Keypad tones (DTMF) in calls, in HD voice and narrowband calls
+- ✅ **HD voice** (AMR-WB) outgoing and incoming on Telstra; narrowband fallback when the other side doesn't offer it
+- ✅ Caller hears you clearly (call mic starts in VoIP audio mode; tested in build 13)
 - ✅ Call audio smooth (jitter buffer)
 - ✅ Incoming calls: ring, caller ID, answer, audio both ways, hang up from either side
 - ✅ Incoming call with screen off / locked; decline; missed-call log
@@ -95,7 +99,7 @@ The same fixes as standalone Magisk modules (for the plain GSI, before the ROM) 
 
 **Audio, camera & media**
 - ✅ Speakers / media playback (Samsung's SoundBooster / SoundAlive / Dolby effects loaded, loud playback clear), microphone, screen recording, volume keys
-- ✅ Dolby Atmos Quick Settings tile switches Samsung's Dolby effect (tested as an installed app); ☐ in a ROM build
+- ✅ Dolby Atmos Quick Settings tile switches Samsung's Dolby effect (build 12+)
 - ✅ Dolby decoders listed for apps (live test); ☐ Dolby audio in a streaming app
 - ✅ Rear main camera, inner (under-display) selfie, cover-screen selfie, flashlight
 - ✅ Ultra-wide and telephoto: photos from every lens, video recording with sound
@@ -224,8 +228,9 @@ steps in [notes/procedure.md](notes/procedure.md). Superseded by the ROM release
 
 - adb/fastboot: `~/Android/sdk/platform-tools/` (not on PATH by default); root shell via `adb shell su -c`.
 - Module builders: `scripts/make-*-module.sh`, `scripts/make-overlays.sh`, `scripts/make-vendor-image.sh`;
-  prebuilt zips in `prebuilt/`; Floss IMS source in `floss-ims/` (GPLv2, phh), our changes vs
-  upstream `phhusson/ims@c180bdf` as patches in `patches/floss-ims/`; overlay source in `overlays/`.
+  prebuilt zips in `prebuilt/`; Floss IMS source in `floss-ims/` (GPLv2, phh; the ROM builds it with
+  Soong as `PhhIms`), our changes vs upstream `phhusson/ims@c180bdf` as patches in
+  `patches/floss-ims/`; overlay source in `overlays/`.
 - Floss build SDK: `build/src/floss-sdk` (android-33 platform with MmTelFeature stripped, build-tools 34).
 - Prototypes kept for the ROM build: `tools/seh-signal/` (signal bars via Samsung ISehRadio),
   `tools/fp-active-group/` (fingerprint setActiveGroup).

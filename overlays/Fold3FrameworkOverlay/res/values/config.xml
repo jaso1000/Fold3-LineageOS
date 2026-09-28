@@ -78,4 +78,11 @@
          levels from the backlight value (kernel aod_candela_map: 0-11 -> 2 nit, 12-29 -> 10,
          30-52 -> 30, 53+ -> 60), so AOD steps 2/10/30/60 nit with the room like One UI. -->
     <fraction name="config_screenAutoBrightnessDozeScaleFactor">30%</fraction>
+
+    <!-- Floss IMS carries call audio itself (RTP on the AP), so IMS calls must be in VoIP audio
+         mode (MODE_IN_COMMUNICATION) from creation. In MODE_IN_CALL Samsung's audio HAL starts
+         its modem voice path, keeps it for the whole call and Floss's mic capture gets ~35-40 dB
+         less signal (caller "hard to hear"). Outgoing calls also need the Telephony patch that
+         sets EXTRA_ALWAYS_USE_VOIP_AUDIO_MODE on the SIM account. -->
+    <bool name="config_use_voip_mode_for_ims">true</bool>
 </resources>

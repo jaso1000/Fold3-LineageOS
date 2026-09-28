@@ -11,16 +11,32 @@ set -euo pipefail
 
 TOP="$(cd "${1:-.}" && pwd)"
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
-V="$TOP/vendor/fold3"
+DEST="$TOP/vendor/fold3"
 [ -f "$TOP/build/envsetup.sh" ] || { echo "not an Android source tree: $TOP" >&2; exit 1; }
+# Assemble in a staging dir, then sync into vendor/fold3 by checksum (below): changed files get a
+# fresh mtime so the build always re-copies them (cp -a kept the repo's mtime, which can be older
+# than the build's staged copy, so an edit was silently not picked up), and unchanged files keep
+# theirs so an untouched Android.bp doesn't trigger a Soong re-analysis.
+V="$(mktemp -d)"
+trap 'rm -rf "$V"' EXIT
 
 GATE='case "$(getprop ro.product.vendor.model)" in SM-F926*) ;; *) exit 0 ;; esac'
 
-rm -rf "$V"
-mkdir -p "$V/bin" "$V/etc" "$V/fp" "$V/overlays" "$V/prebuilt/FlossIms"
+mkdir -p "$V/bin" "$V/etc" "$V/fp" "$V/overlays"
 cp -a "$REPO/rom/vendor_fold3/." "$V/"
 cp -a "$REPO"/overlays/*/ "$V/overlays/"
 rm -rf "$V"/overlays/*/build
+
+# Floss IMS source (Soong module PhhIms), so it can be built in the tree: `m PhhIms`
+mkdir -p "$V/floss-ims/app"
+cp -a "$REPO/floss-ims/Android.bp" "$REPO/floss-ims/overlay" "$V/floss-ims/"
+mkdir -p "$V/floss-ims/app/src"
+cp -a "$REPO/floss-ims/app/src/main" "$V/floss-ims/app/src/"
+cp -a "$REPO/floss-ims/app/jniLibs" "$V/floss-ims/app/"
+mkdir -p "$V/floss-ims/app/libs"
+cp -a "$REPO/floss-ims/app/libs/ImsMediaFramework.jar" "$V/floss-ims/app/libs/"
+# Gradle takes the package name from build.gradle's namespace; Soong needs it in the manifest
+sed -i '0,/<manifest /s//<manifest package="me.phh.ims" /' "$V/floss-ims/app/src/main/AndroidManifest.xml"
 
 # Module scripts -> /system/bin/fold3-<module>.sh, with a device gate after the shebang
 module_script() { # <module dir> <script> <dest name>
@@ -53,11 +69,11 @@ chmod 755 "$V"/bin/*.sh
 cp "$REPO/magisk-src/fold3-fold-config/system/product/etc/displayconfig/display_id_4630947232161729155.xml" "$V/etc/"
 cp "$REPO/magisk-src/fold3-floss-ims/system/etc/permissions/privapp-permissions-me.phh.ims.xml" "$V/etc/"
 
-# Floss IMS APK + JNI lib, and the fingerprint helper dex, from the committed module zips
-unzip -qjo "$REPO/prebuilt/fold3-floss-ims.zip" \
-    system/priv-app/FlossIms/FlossIms.apk system/priv-app/FlossIms/lib/arm64/librnnoise_jni.so \
-    -d "$V/prebuilt/FlossIms"
+# Fingerprint helper dex from the committed module zip
 unzip -qjo "$REPO/prebuilt/fold3-fingerprint-fix.zip" fpactive.dex -d "$V/fp"
+
+mkdir -p "$DEST"
+rsync -rlpc --delete --itemize-changes "$V/" "$DEST/" | grep -v '^\.' || true
 
 # Source patches
 for dir in "$REPO"/rom/patches/*/; do
@@ -76,4 +92,4 @@ for dir in "$REPO"/rom/patches/*/; do
         fi
     done
 done
-echo "Fold3 changes in place ($V)"
+echo "Fold3 changes in place ($DEST)"

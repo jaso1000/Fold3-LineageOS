@@ -9,8 +9,26 @@ android_app {
     static_libs: [
       "com.google.android.material_material",
       "kotlinx-coroutines-android",
+      "floss-imsmedia-framework",
     ],
-    required: ["PhhImsOverlay"],
+    // phh's prebuilt RNNoise JNI lib, packaged in the APK so an adb-installed update works
+    jni_libs: ["librnnoise_jni_phh"],
+    use_embedded_native_libs: true,
+    compile_multilib: "64",
+    // PhhImsOverlay (config_ims_mmtel_package) isn't installed on the Fold3 ROM: TrebleDroid
+    // selects Floss with persist.sys.phh.ims.floss
+}
+
+cc_prebuilt_library_shared {
+    name: "librnnoise_jni_phh",
+    stem: "librnnoise_jni",
+    srcs: ["app/jniLibs/arm64-v8a/librnnoise_jni.so"],
+    compile_multilib: "64",
+    check_elf_files: false,
+    strip: {
+        none: true,
+    },
+    sdk_version: "current",
 }
 
 runtime_resource_overlay {
@@ -19,4 +37,11 @@ runtime_resource_overlay {
   manifest: "overlay/AndroidManifest.xml",
   certificate: "platform",
   product_specific: true,
+}
+
+// android.telephony.imsmedia client classes (not in this platform's framework jar), bundled the
+// same way the Gradle build does
+java_import {
+    name: "floss-imsmedia-framework",
+    jars: ["app/libs/ImsMediaFramework.jar"],
 }

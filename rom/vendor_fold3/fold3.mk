@@ -9,7 +9,7 @@ PRODUCT_PACKAGES += \
     Fold3ApertureOverlay \
     Fold3LineageOverlay \
     Fold3SystemUIOverlay \
-    FlossIms \
+    PhhIms \
     Fold3Dolby
 
 # Boot scripts (copied from magisk-src/ by rom/apply.sh) + init
@@ -28,9 +28,9 @@ PRODUCT_COPY_FILES += \
 PRODUCT_COPY_FILES += \
     vendor/fold3/etc/display_id_4630947232161729155.xml:$(TARGET_COPY_OUT_PRODUCT)/etc/displayconfig/display_id_4630947232161729155.xml
 
-# Floss IMS: native lib next to the priv-app (as in the Magisk module) + permissions
+# Floss IMS (PhhIms, built from floss-ims/ with our Telstra and HD voice changes; RNNoise lib
+# inside the APK): privileged permissions
 PRODUCT_COPY_FILES += \
-    vendor/fold3/prebuilt/FlossIms/librnnoise_jni.so:$(TARGET_COPY_OUT_SYSTEM)/priv-app/FlossIms/lib/arm64/librnnoise_jni.so \
     vendor/fold3/etc/privapp-permissions-me.phh.ims.xml:$(TARGET_COPY_OUT_SYSTEM)/etc/permissions/privapp-permissions-me.phh.ims.xml
 
 PRODUCT_SYSTEM_PROPERTIES += \

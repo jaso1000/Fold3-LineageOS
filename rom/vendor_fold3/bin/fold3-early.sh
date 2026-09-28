@@ -40,9 +40,23 @@ AP_DEF=/vendor/etc/audio_policy_configuration.xml
 # without it loud speaker playback sounds strained and muffled), SoundAlive, sa3d on music/ring/
 # alarm, Dolby Atmos (dap). All libraries are on the vendor partition except Adapt Sound's
 # libmysound (skipped with a log line).
+# Calls: One UI's voice path runs in the modem, so Samsung's file only puts echo cancellation on
+# voice_communication. Floss IMS calls use that (VoIP) mic path, so also keep the generic file's
+# noise suppression there, or background noise goes out unfiltered and the caller sounds faint.
 AE_SEC=/vendor/etc/audio_effects_sec.xml
 AE_DEF=/vendor/etc/audio_effects.xml
-[ -f "$AE_SEC" ] && mount -o bind "$AE_SEC" "$AE_DEF"
+AE_FIX=/mnt/fold3/audio_effects.xml
+if [ -f "$AE_SEC" ]; then
+    mkdir -p /mnt/fold3
+    awk '
+        /<stream type="voice_communication">/ { vc = 1 }
+        { print }
+        vc && /<apply effect="aec"\/>/ { sub(/<apply effect="aec"\/>/, "<apply effect=\"ns\"/>"); print; vc = 0 }
+    ' "$AE_SEC" > "$AE_FIX"
+    chcon u:object_r:vendor_configs_file:s0 "$AE_FIX"
+    chmod 644 "$AE_FIX"
+    mount -o bind "$AE_FIX" "$AE_DEF"
+fi
 
 # Dolby decoders (AC-3, E-AC-3 incl. Atmos/JOC, AC-4): Samsung's codec service has them, but the
 # codec list the GSI reads (media_codecs_lahaina.xml) doesn't include Dolby's codec file, so apps

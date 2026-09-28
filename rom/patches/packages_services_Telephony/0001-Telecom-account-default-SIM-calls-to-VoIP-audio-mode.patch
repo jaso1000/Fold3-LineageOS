@@ -1,0 +1,89 @@
+From c0a6d5ad46bb39447c0510e0a12068bfa29cccc5 Mon Sep 17 00:00:00 2001
+From: Jason Walker <59085866+jaso1000@users.noreply.github.com>
+Date: Mon, 28 Sep 2026 22:29:18 +1000
+Subject: [PATCH] Telecom account: default SIM calls to VoIP audio mode while
+ IMS voice is available
+
+IMS stacks that carry call audio on the application processor (Floss IMS,
+config_use_voip_mode_for_ims) need calls in MODE_IN_COMMUNICATION from the
+start. Telecom picks the audio mode as soon as an outgoing call is placed,
+before ImsPhoneConnection exists; MODE_IN_CALL makes Samsung's audio HAL
+start its modem voice path (voicemmode1-call), which it keeps for the whole
+call, and the AP capture then gets ~35-40 dB less signal. Set
+EXTRA_ALWAYS_USE_VOIP_AUDIO_MODE on the SIM account while IMS voice is
+available (updated on MmTel capability changes); calls that end up on the
+modem are switched back by TelephonyConnection.
+
+Change-Id: I081c4bf09d9dfe7f8a5803c83209cc6de38fdf30
+---
+ .../telephony/TelecomAccountRegistry.java     | 33 +++++++++++++++++++
+ 1 file changed, 33 insertions(+)
+
+diff --git a/src/com/android/services/telephony/TelecomAccountRegistry.java b/src/com/android/services/telephony/TelecomAccountRegistry.java
+index 4a90dc1..f4b75e1 100644
+--- a/src/com/android/services/telephony/TelecomAccountRegistry.java
++++ b/src/com/android/services/telephony/TelecomAccountRegistry.java
+@@ -156,6 +156,7 @@ public class TelecomAccountRegistry {
+         private ImsMmTelManager mMmTelManager;
+         private final boolean mIsTestAccount;
+         private boolean mIsVideoCapable;
++        private boolean mUseVoipAudioMode;
+         private boolean mIsVideoPresenceSupported;
+         private boolean mIsVideoPauseSupported;
+         private boolean mIsMergeCallSupported;
+@@ -208,6 +209,7 @@ public class TelecomAccountRegistry {
+                     mMmTelCapabilities = capabilities;
+                     updateRttCapability();
+                     updateCallComposerCapability(capabilities);
++                    updateVoipAudioMode();
+                 }
+             };
+             registerMmTelCapabilityCallback();
+@@ -522,6 +524,19 @@ public class TelecomAccountRegistry {
+                 extras.putInt(PhoneAccount.EXTRA_SORT_ORDER, slotId);
+             }
+ 
++            // IMS stacks that carry call audio on the application processor (RTP/VoIP audio,
++            // config_use_voip_mode_for_ims) need the call in MODE_IN_COMMUNICATION from the start.
++            // ImsPhoneConnection applies that only once the connection exists, but Telecom picks
++            // the audio mode as soon as an outgoing call is placed: MODE_IN_CALL makes the vendor
++            // audio HAL start its modem voice path, which it keeps for the whole call, and the AP
++            // capture then gets almost nothing. So default calls to VoIP audio mode while IMS
++            // voice is available; a call that ends up on the modem (CS) is switched back by
++            // TelephonyConnection from its original connection.
++            mUseVoipAudioMode = !isEmergency && isVoipAudioModeForIms();
++            if (mUseVoipAudioMode) {
++                extras.putBoolean(PhoneAccount.EXTRA_ALWAYS_USE_VOIP_AUDIO_MODE, true);
++            }
++
+             mIsMergeCallSupported = isCarrierMergeCallSupported();
+             mIsMergeImsCallSupported = isCarrierMergeImsCallSupported();
+             mIsVideoConferencingSupported = isCarrierVideoConferencingSupported();
+@@ -1009,6 +1024,24 @@ public class TelecomAccountRegistry {
+             }
+         }
+ 
++        private boolean isVoipAudioModeForIms() {
++            return mContext.getResources().getBoolean(
++                    com.android.internal.R.bool.config_use_voip_mode_for_ims)
++                    && isImsVoiceAvailable();
++        }
++
++        public void updateVoipAudioMode() {
++            synchronized (mAccountsLock) {
++                if (!mAccounts.contains(this) || mIsEmergency) {
++                    return;
++                }
++                if (isVoipAudioModeForIms() != mUseVoipAudioMode) {
++                    Log.i(this, "updateVoipAudioMode - changed, new value: " + !mUseVoipAudioMode);
++                    mAccount = registerPstnPhoneAccount(mIsEmergency, mIsTestAccount);
++                }
++            }
++        }
++
+         public void updateCallComposerCapability(MmTelFeature.MmTelCapabilities capabilities) {
+             synchronized (mAccountsLock) {
+                 if (!mAccounts.contains(this)) {
+-- 
+2.43.0
+
