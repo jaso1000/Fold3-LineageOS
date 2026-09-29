@@ -90,7 +90,7 @@ The same fixes as standalone Magisk modules (for the plain GSI, before the ROM) 
 - ✅ Auto-brightness (Adaptive brightness) on both screens
 - ✅ Always-on display on both screens in Samsung's low-power panel mode (inner 1–30 Hz, cover 30 Hz); brightness follows the light sensor through Samsung's AOD levels
 - ✅ Pocket: AOD turns off while the proximity sensor is covered
-- ☐ "Prevent accidental wake-up" (on by default): no wake-up while the sensor is covered
+- ✅ "Prevent accidental wake-up" (on by default): no wake-up while the sensor is covered
 - ✅ Half-fold doesn't glitch
 - ✅ Adaptive refresh 48–120 Hz; holds 120 Hz only when dim in a dim room (One UI's thresholds per screen) to avoid low-brightness flicker; AOD at 48 Hz
 - ✅ Lock on fold / wake on unfold (Settings → Display → "Continue using apps on fold", default "Never")
