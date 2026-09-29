@@ -1,0 +1,28 @@
+From 72a5920a26df33ae166104b3fc382c4c1252dc0a Mon Sep 17 00:00:00 2001
+From: Jason Walker <59085866+jaso1000@users.noreply.github.com>
+Date: Sat, 26 Sep 2026 01:02:18 +1000
+Subject: [PATCH] guard goodix sysfs write behind existence check
+
+(MisterZtr trebledroid-staging 0002, applied by hand: context moved upstream)
+---
+ rw-system.sh | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/rw-system.sh b/rw-system.sh
+index 60b6901..8ca3209 100644
+--- a/rw-system.sh
++++ b/rw-system.sh
+@@ -1323,7 +1323,9 @@ if getprop ro.vendor.build.fingerprint | grep -iq -e Rebecco/K70_ROW; then
+ fi
+ 
+ # Enable pen mode on Lenovo/goodix
+-echo 1 > /sys/devices/platform/goodix_ts.0/support_pen
++if [ -e /sys/devices/platform/goodix_ts.0/support_pen ]; then
++    echo 1 > /sys/devices/platform/goodix_ts.0/support_pen
++fi
+ 
+ # Samsung's sw Codec2 service seccomp policy only allows mremap with
+ # MREMAP_MAYMOVE|MREMAP_FIXED, but the current bionic allocator uses other
+-- 
+2.43.0
+

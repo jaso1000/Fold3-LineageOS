@@ -4,12 +4,64 @@ Everything that turns MisterZtr's LineageOS 23.2 TrebleDroid GSI into the Fold3 
 top of his patches with `rom/apply.sh`; see [notes/rom-packaging-todo.md](../notes/rom-packaging-todo.md)
 for the plan and status.
 
+## Building from source
+
+Everything needed is in this repo plus public sources; no Samsung or Google files are required to
+build. Tested on Ubuntu 24.04 (WSL2) with 32 GB RAM + 32 GB swap: the Soong analysis step peaks at
+~25 GB, the tree plus `out/` and ccache need ~300 GB. First build ~5 h, incremental ~30–60 min.
+
+**1. Sync LineageOS 23.2 with MisterZtr's TrebleDroid manifest**
 ```bash
-cd ~/android/lineage
-bash LineageOS_gsi/patches/apply-patches.sh .     # MisterZtr's patches (once per sync)
-bash ~/Projects/Fold3-LineageOS/rom/apply.sh .    # ours (re-runnable)
-. build/envsetup.sh && breakfast lineage_arm64_bvN4-bp4a-userdebug && make systemimage -j12
+mkdir -p ~/android/lineage && cd ~/android/lineage
+repo init -u https://github.com/LineageOS/android.git -b lineage-23.2 --git-lfs --depth=1
+git clone https://github.com/MisterZtr/treble_manifest.git .repo/local_manifests -b lineage-23.2
+repo sync -c --no-tags -j4
 ```
+
+**2. MisterZtr's GSI patches, pinned to the version the releases use**
+```bash
+git -C LineageOS_gsi fetch --depth=1 origin tag v2026.05.24-lineage23.2
+git -C LineageOS_gsi checkout v2026.05.24-lineage23.2     # 7bf212f
+bash LineageOS_gsi/patches/apply-patches.sh .
+```
+One of his patches (trebledroid-staging `device_phh_treble` 0002, the goodix `support_pen` guard)
+no longer applies to current TrebleDroid; if it's left half-applied, `git -C device/phh/treble am
+--abort`. Our resolved version is `patches/device_phh_treble/0000` and `apply.sh` applies it.
+
+**3. TrebleApp** (the GSI's settings app, a prebuilt APK the build expects):
+`cd treble_app && bash build.sh` (needs Java 17 and an Android SDK in `$ANDROID_HOME`).
+
+**4. The Fold3 changes** (re-run after every edit in this repo; only changed files are updated):
+```bash
+git clone https://github.com/jaso1000/Fold3-LineageOS.git ~/Projects/Fold3-LineageOS
+bash ~/Projects/Fold3-LineageOS/rom/apply.sh ~/android/lineage
+```
+
+**5. Build.** Export the ccache settings in the same shell (a non-interactive shell doesn't read
+`~/.bashrc`; without them every compile command changes and the next build is a full rebuild), and
+use `breakfast` (`lunch` fails with "No release config"):
+```bash
+export USE_CCACHE=1 CCACHE_EXEC=/usr/bin/ccache CCACHE_DIR=~/ccache CCACHE_COMPRESS=1
+cd ~/android/lineage && . build/envsetup.sh
+breakfast lineage_arm64_bvN4-bp4a-userdebug && make systemimage -j12
+```
+Adding or changing an `Android.bp` makes Soong re-analyse the tree (~25 min). Single modules build
+with `m <name>` (e.g. `m PhhIms`, `m TeleService`).
+
+**6. Release image**: grow it so the GApps installer has room, then compress.
+```bash
+I=lineage-23.2-<date>-UNOFFICIAL-q2q-VANILLA-EXT4.img
+cp out/target/product/generic_arm64/system.img $I
+truncate -s +1700M $I && e2fsck -fy $I && resize2fs $I
+xz -T0 -6 $I && sha256sum $I.xz > $I.xz.sha256
+```
+Builds are signed with the AOSP test keys.
+
+**Testing tips.** Persistent system apps (TeleService, Floss) can't be updated with `adb install`;
+to try a new build of one without flashing, bind-mount it over the system APK and restart the
+process (`mount -o bind new.apk /system/priv-app/<App>/<App>.apk; killall <package>`; gone after
+a reboot). Restarting `com.android.phone` mid-session loses signal bars until the next reboot.
+Useful probes are in `tools/` (sensor values, Dolby, codec list, VoIP mic level).
 
 ## What replaces which Magisk module
 

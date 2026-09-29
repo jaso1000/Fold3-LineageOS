@@ -137,7 +137,7 @@ The same fixes as standalone Magisk modules (for the plain GSI, before the ROM) 
 
 Built on a Windows desktop under WSL2: LineageOS 23.2 + MisterZtr's `treble_manifest` and patches,
 then `rom/apply.sh` (our patches and `vendor/fold3`), `breakfast lineage_arm64_bvN4-bp4a-userdebug &&
-make systemimage`. Details in [rom/README.md](rom/README.md); open items (emergency calls, clean-install
+make systemimage`. Step-by-step build instructions and details: [rom/README.md](rom/README.md#building-from-source); open items (emergency calls, clean-install
 test, a TWRP-flashable zip) in [notes/rom-packaging-todo.md](notes/rom-packaging-todo.md).
 
 ## Installing it yourself
