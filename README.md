@@ -79,7 +79,7 @@ The same fixes as standalone Magisk modules (for the plain GSI, before the ROM) 
 - ✅ Mobile data, Wi-Fi, Bluetooth (headphones, controller), airplane mode
 - ✅ Hotspot
 - ✅ GPS / location
-- ☐ NFC tag read
+- ✅ NFC (tap-to-pay not supported, see Play Integrity)
 - ☐ eSIM (download/activate a profile)
 
 **Display & fold**

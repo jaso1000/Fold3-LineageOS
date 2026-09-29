@@ -37,7 +37,7 @@ An unofficial LineageOS 23.2 (Android 16) system image built from source:
 [*]Signal bars
 [*]VoLTE calls in and out in [B]HD voice[/B] (AMR-WB, patched phh Floss IMS): clear mic level, caller ID, keypad tones, speaker, Bluetooth, calls from the call log
 [*]SMS and MMS over IMS, RCS in Google Messages (with Magisk + Play Integrity Fix)
-[*]Mobile data, 5G, Wi-Fi, Bluetooth, hotspot, GPS
+[*]Mobile data, 5G, Wi-Fi, Bluetooth, hotspot, GPS, NFC
 [*]All cameras: main, ultra-wide, 2x telephoto, inner under-display selfie, cover selfie
 [*]Flex mode in apps (e.g. YouTube half-folded)
 [*]Fingerprint, storage, speakers with Samsung's SoundBooster / SoundAlive effects, USB-C headphones, haptics, wireless charging
