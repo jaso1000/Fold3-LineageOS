@@ -66,7 +66,7 @@ The same fixes as standalone Magisk modules (for the plain GSI, before the ROM) 
 - ☐ Calls still work after 1–2+ h idle (re-registration fix)
 - ⚠️ **Emergency calls (000/112): untested** (see the warning at the top). Emergency data connection + emergency registration verified on Telstra; the emergency call itself (INVITE `urn:service:sos`) isn't written, so 000 goes out as a normal VoLTE call. Never test by dialling 000.
 - ☐ Call waiting, hold/swap, merge into conference
-- ☐ Voicemail notification (new-voicemail indicator)
+- ✅ Voicemail notification: Telstra's new-voicemail SMS arrives (Android's own voicemail icon/MWI isn't supported by Floss)
 - ☐ Wi-Fi calling (likely unsupported by Floss)
 - ☐ USSD codes (e.g. balance checks)
 - ✅ Speakerphone and Bluetooth audio in calls
