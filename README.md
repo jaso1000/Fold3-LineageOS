@@ -120,7 +120,7 @@ The same fixes as standalone Magisk modules (for the plain GSI, before the ROM) 
 - ✅ Several reboots in a row: network and fingerprint come back each time
 - ✅ Android Auto over a USB cable (and wireless)
 - ✅ Overnight battery drain: about the same as stock
-- ☐ A full day of normal use without crashes or lost network
+- ✅ A full day of normal use without crashes or lost network
 - ☐ Alarms fire while locked / in Doze
 - ⚠️ Banking apps / Wallet tap-to-pay: not used on this phone. Many banks' terms forbid modified or rooted OSes, and an unlocked bootloader only gets BASIC integrity. Keep banking on a stock, updated phone.
 
