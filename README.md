@@ -205,6 +205,15 @@ Notes:
 6. Reboot. The stock JJZH3 vendor is fine (the dual-screen fix is built in; the patched vendor
    image from older guides isn't needed).
 
+> **Fresh install problems with Google apps?** (A clean install hasn't been tested yet; updates over
+> an existing install are.) If setup crashes or loops, or Google sign-in / Play Store fails, Format
+> Data again and flash [BiTGApps](https://bitgapps.io) **Core** for Android 16 (arm64) instead of
+> MindTheGapps (the earlier GSI builds used it). BiTGApps Core doesn't pre-grant Google Services
+> Framework, so after setup run:
+> `adb shell pm grant com.google.android.gsf android.permission.GET_ACCOUNTS` (repeat for
+> `READ_CONTACTS`, `WRITE_CONTACTS`, `READ_PHONE_STATE`). With BiTGApps, Android Auto may show
+> "error 22" (it needs to be a privileged system app, which MindTheGapps provides).
+
 **4. Optional: root, RCS**
 1. Root: extract `boot.img` from the **exact** firmware your phone runs (samloader), patch it with
    [Magisk](https://github.com/topjohnwu/Magisk), flash via Install Image → Boot. (A boot.img from any

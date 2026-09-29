@@ -81,6 +81,7 @@ Short version, in TWRP:
 [*]Fresh install: Format Data. Updating: skip, data is kept
 [*]Reboot
 [/LIST]
+If Google apps give trouble on a fresh install (setup loops, sign-in or Play Store fails): Format Data and try [URL='https://bitgapps.io']BiTGApps[/URL] Core instead of MindTheGapps, then grant GSF its permissions (details in the install guide). Android Auto may not work with BiTGApps.
 Other carriers: add an APN with APN "ims", type "ims", protocol IPv4/IPv6 for VoLTE.
 
 How each fix works: [URL='https://github.com/jaso1000/Fold3-LineageOS/blob/master/rom/README.md']rom/README.md[/URL] · root causes: [URL='https://github.com/jaso1000/Fold3-LineageOS/blob/master/notes/procedure.md']notes/procedure.md[/URL]
