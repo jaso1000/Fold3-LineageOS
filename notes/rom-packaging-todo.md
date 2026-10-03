@@ -24,6 +24,9 @@ currently delivered via Magisk that must be baked in. See notes/procedure.md for
     NVMe with ~358 GB free, E: = Seagate 1 TB USB HDD (empty). WSL not installed yet.
     → `.wslconfig`: memory ~26 GB, 16 processors, swap 32 GB (swap file on C:).
     → Use the hybrid layout: source on E:, `out/` + ccache in a ~150 GB VHDX on C:.
+  - **2026-10-03**: everything moved off C: to free the SSD: the build VHDX, swap and backups are
+    now in `E:\WSL-build` (attach with `wsl --mount --vhd E:\WSL-build\build.vhdx --bare` from an
+    admin PowerShell after each Windows reboot). Incremental builds are slower on the HDD.
   - Fallbacks: apply to **Crave.io** (free ROM build servers, invite-only) in parallel; buy a 1 TB
     SSD (~AUD 100–150) if HDD iteration is too slow. Hetzner Cloud doubled its prices in June 2026
     (CCX33 ~€165/mo), so it's no longer a cheap option; cloud spot VMs are the paid fallback.
