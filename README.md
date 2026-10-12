@@ -6,10 +6,10 @@ Fold3 fixes built in. **Download: [Releases](https://github.com/jaso1000/Fold3-L
 
 Device: Samsung Galaxy Z Fold3, SM-F926B (Australian variant), codename **q2q**, Snapdragon 888 (SM8350).
 
-## Status (updated 2026-09-28)
+## Status (updated 2026-10-12)
 
-**Latest build: [fold3-2026.09.28.2](https://github.com/jaso1000/Fold3-LineageOS/releases/tag/fold3-2026.09.28.2)**,
-Android security patch 2026-09-01, on Samsung's **final** firmware F926BXXSJJZH3 (Samsung ended
+**Latest build: [fold3-2026.10.12](https://github.com/jaso1000/Fold3-LineageOS/releases/tag/fold3-2026.10.12)**,
+Android security patch 2026-10-01, on Samsung's **final** firmware F926BXXSJJZH3 (Samsung ended
 Fold3 updates in September 2026). A TrebleDroid-based system image (MisterZtr's LineageOS GSI
 patches) plus this repo's Fold3 changes (`rom/`): no Magisk modules needed, root optional. Daily
 driver for the dev, including **VoLTE with HD voice on Telstra/Boost**, both screens, signal bars, AOD,
@@ -121,11 +121,15 @@ The same fixes as standalone Magisk modules (for the plain GSI, before the ROM) 
 - ✅ Android Auto over a USB cable (and wireless)
 - ✅ Overnight battery drain: about the same as stock
 - ✅ A full day of normal use without crashes or lost network
+- ✅ Clean install (Format Data, then flash)
 - ☐ Alarms fire while locked / in Doze
 - ⚠️ Banking apps / Wallet tap-to-pay: not used on this phone. Many banks' terms forbid modified or rooted OSes, and an unlocked bootloader only gets BASIC integrity. Keep banking on a stock, updated phone.
 
 ## Releases and building
 
+- **2026-10-12** [fold3-2026.10.12](https://github.com/jaso1000/Fold3-LineageOS/releases/tag/fold3-2026.10.12):
+  October security patch (2026-10-01) on the latest LineageOS 23.2, all Fold3 fixes unchanged
+  ([notes](notes/releases/2026-10-12.md)).
 - **2026-09-28.2** [fold3-2026.09.28.2](https://github.com/jaso1000/Fold3-LineageOS/releases/tag/fold3-2026.09.28.2):
   callers hear you clearly (call mic level fixed), HD voice (AMR-WB), call-mic noise suppression,
   Dolby Atmos tile, Dolby decoders for streaming apps ([notes](notes/releases/2026-09-28.2.md)).
@@ -137,8 +141,8 @@ The same fixes as standalone Magisk modules (for the plain GSI, before the ROM) 
 
 Built on a Windows desktop under WSL2: LineageOS 23.2 + MisterZtr's `treble_manifest` and patches,
 then `rom/apply.sh` (our patches and `vendor/fold3`), `breakfast lineage_arm64_bvN4-bp4a-userdebug &&
-make systemimage`. Step-by-step build instructions and details: [rom/README.md](rom/README.md#building-from-source); open items (emergency calls, clean-install
-test, a TWRP-flashable zip) in [notes/rom-packaging-todo.md](notes/rom-packaging-todo.md).
+make systemimage`. Step-by-step build instructions and details: [rom/README.md](rom/README.md#building-from-source); open items (emergency calls, a
+TWRP-flashable zip) in [notes/rom-packaging-todo.md](notes/rom-packaging-todo.md).
 
 ## Installing it yourself
 
@@ -205,8 +209,7 @@ Notes:
 6. Reboot. The stock JJZH3 vendor is fine (the dual-screen fix is built in; the patched vendor
    image from older guides isn't needed).
 
-> **Fresh install problems with Google apps?** (A clean install hasn't been tested yet; updates over
-> an existing install are.) If setup crashes or loops, or Google sign-in / Play Store fails, Format
+> **Fresh install problems with Google apps?** If setup crashes or loops, or Google sign-in / Play Store fails, Format
 > Data again and flash [BiTGApps](https://bitgapps.io) **Core** for Android 16 (arm64) instead of
 > MindTheGapps (the earlier GSI builds used it). BiTGApps Core doesn't pre-grant Google Services
 > Framework, so after setup run:

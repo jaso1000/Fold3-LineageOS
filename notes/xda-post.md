@@ -6,6 +6,7 @@ I was almost going to pull the trigger on upgrading my aging z fold 3 for a pixe
 I had pretty good success so far and given the lack of development for this device I figured I'd share all the fixes I've worked through.
 
 [B]Update (2026-09-28):[/B] it's now a proper ROM built from source with all the fixes baked in, and there's a downloadable release. No Magisk modules needed anymore, root is optional.
+[B]Update (2026-10-12):[/B] October security patch (2026-10-01) on the latest LineageOS 23.2.
 [B]Update (2026-09-28.2):[/B] calls are now in HD voice, and people can finally hear you properly (the call mic level was about 40 dB too low). Also added a Dolby Atmos quick settings tile and Dolby audio for streaming apps.
 
 Full disclosure: AI was used heavily to get to this point and all text below this point is AI generated too!
@@ -17,13 +18,13 @@ Jason
 
 [URL='https://github.com/jaso1000/Fold3-LineageOS']github.com/jaso1000/Fold3-LineageOS[/URL]
 
-[B]Download:[/B] [URL='https://github.com/jaso1000/Fold3-LineageOS/releases']latest release[/URL] (currently [URL='https://github.com/jaso1000/Fold3-LineageOS/releases/tag/fold3-2026.09.28.2']fold3-2026.09.28.2[/URL])
+[B]Download:[/B] [URL='https://github.com/jaso1000/Fold3-LineageOS/releases']latest release[/URL] (currently [URL='https://github.com/jaso1000/Fold3-LineageOS/releases/tag/fold3-2026.10.12']fold3-2026.10.12[/URL])
 
 [SIZE=5][B]What this is (right now)[/B][/SIZE]
 An unofficial LineageOS 23.2 (Android 16) system image built from source:
 [LIST]
 [*]MisterZtr's [URL='https://github.com/MisterZtr/LineageOS_gsi']LineageOS 23.2 TrebleDroid GSI[/URL] patches, plus all the Fold3 fixes built in ([URL='https://github.com/jaso1000/Fold3-LineageOS/tree/master/rom']rom/[/URL])
-[*]Android security patch 2026-09-01, on Samsung's final firmware (F926BXXSJJZH3), stock vendor
+[*]Android security patch 2026-10-01, on Samsung's final firmware (F926BXXSJJZH3), stock vendor
 [*]Vanilla: flash [URL='https://github.com/MindTheGapps/16.0.0-arm64/releases']MindTheGapps[/URL] for Google apps. Magisk optional
 [*]Installed with TWRP's Install Image (a system image, not a one-zip flashable ROM yet)
 [/LIST]
@@ -51,7 +52,6 @@ Full checklist, including what's untested: [URL='https://github.com/jaso1000/Fol
 [SIZE=5][B]Known issues[/B][/SIZE]
 [LIST]
 [*][B]Emergency calls (000/112): untested.[/B] SIP-level emergency tests pass on Telstra (emergency data connection and registration), but the dedicated emergency call isn't implemented yet, so 000 is sent as a normal VoLTE call, and no real emergency call has been made. Don't rely on this phone for emergencies; keep another phone available.
-[*]A clean install hasn't been tested yet (I've been updating over my existing install). Please report if a fresh install needs extra steps.
 [*]Booting unfolded leaves the Samsung logo on the cover screen until the first fold. Boot folded, or fold once after booting.
 [*]VoLTE is only tested on Telstra/Boost. Other carriers need an IMS APN and may need more work.
 [*]Samsung's "Adapt Sound" isn't available.
@@ -89,7 +89,6 @@ How each fix works: [URL='https://github.com/jaso1000/Fold3-LineageOS/blob/maste
 [SIZE=5][B]What's next[/B][/SIZE]
 [LIST]
 [*]Emergency calls over VoLTE (the dedicated emergency call)
-[*]Testing a clean install
 [*]A one-zip TWRP-flashable package
 [/LIST]
 
