@@ -202,14 +202,16 @@ Notes:
 1. Download the image from the [latest release](https://github.com/jaso1000/Fold3-LineageOS/releases/latest)
    and check its `.sha256`.
    Unpack it on your computer (`xz -d …img.xz`, or 7-Zip on Windows). It's already enlarged for GApps.
-2. Download [MindTheGapps](https://github.com/MindTheGapps/16.0.0-arm64/releases) for Android 16 (arm64).
+2. Download MindTheGapps for Android 16 (arm64), **version [20260915_222150](https://github.com/MindTheGapps/16.0.0-arm64/releases/tag/MindTheGapps-16.0.0-arm64-20260915_222150)** (tested). The
+   newer 20261021 release crashes Google Play services and freezes setup on a fresh install of this ROM.
 3. In TWRP: `adb push lineage-….img /tmp/` and `adb push MindTheGapps-….zip /tmp/`.
 4. Install → **Install Image** → the `.img` → **System**; then Install → **Install Zip** → MindTheGapps.
 5. **Fresh install:** Wipe → **Format Data**. **Updating from an earlier build:** skip this, data is kept.
 6. Reboot. The stock JJZH3 vendor is fine (the dual-screen fix is built in; the patched vendor
    image from older guides isn't needed).
 
-> **Fresh install problems with Google apps?** If setup crashes or loops, or Google sign-in / Play Store fails, Format
+> **Fresh install problems with Google apps?** First make sure you used MindTheGapps
+> [20260915_222150](https://github.com/MindTheGapps/16.0.0-arm64/releases/tag/MindTheGapps-16.0.0-arm64-20260915_222150) (the 20261021 release breaks setup). If setup crashes or loops, or Google sign-in / Play Store fails, Format
 > Data again and flash [BiTGApps](https://bitgapps.io) **Core** for Android 16 (arm64) instead of
 > MindTheGapps (the earlier GSI builds used it). BiTGApps Core doesn't pre-grant Google Services
 > Framework, so after setup run:

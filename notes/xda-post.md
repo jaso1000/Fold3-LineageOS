@@ -25,7 +25,7 @@ An unofficial LineageOS 23.2 (Android 16) system image built from source:
 [LIST]
 [*]MisterZtr's [URL='https://github.com/MisterZtr/LineageOS_gsi']LineageOS 23.2 TrebleDroid GSI[/URL] patches, plus all the Fold3 fixes built in ([URL='https://github.com/jaso1000/Fold3-LineageOS/tree/master/rom']rom/[/URL])
 [*]Android security patch 2026-10-01, on Samsung's final firmware (F926BXXSJJZH3), stock vendor
-[*]Vanilla: flash [URL='https://github.com/MindTheGapps/16.0.0-arm64/releases']MindTheGapps[/URL] for Google apps. Magisk optional
+[*]Vanilla: flash [URL='https://github.com/MindTheGapps/16.0.0-arm64/releases/tag/MindTheGapps-16.0.0-arm64-20260915_222150']MindTheGapps 20260915[/URL] for Google apps (the newer 20261021 release breaks setup on a fresh install). Magisk optional
 [*]Installed with TWRP's Install Image (a system image, not a one-zip flashable ROM yet)
 [/LIST]
 
