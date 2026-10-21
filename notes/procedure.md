@@ -226,6 +226,30 @@ BiTGApps Core doesn't pre-grant GSF: `pm grant com.google.android.gsf android.pe
   `config_supportDoubleTapWake=true` (Settings toggle, `secure double_tap_to_wake`), and service.sh
   writes `aot_enable,<setting>` to both panels at boot, on change, and every ~60 s.
 
+### Google sync after a fresh install (MindTheGapps)
+Seen 2026-10-22 on a fresh install of fold3-2026.10.12. MindTheGapps 20261021 froze setup (Setup
+wizard ANR, Play services crash loop), so setup was done with 20260915. Afterwards nothing synced:
+`GoogleAuthUtil ... AUTH_SECURITY_ERROR`. Two causes:
+1. GSF lacked `GET_ACCOUNTS`, `READ_CONTACTS`, `WRITE_CONTACTS`, `READ_PHONE_STATE` →
+   `adb shell pm grant com.google.android.gsf android.permission.<each>`.
+2. Play services had auto-updated to 26.41, whose token code calls `RoleManager.getRoleHolders`
+   (`GET_ROLE_HOLDERS`, privileged). An update to a privileged system app only gets privileged
+   permissions its system copy also requests; 20260915's GmsCore (25.15.32) doesn't, 20261021's
+   (25.38.30) does. Fix, no root:
+   - TWRP: Install Zip → MindTheGapps 20261021 (no image, no wipe).
+   - MindTheGapps stamps its files 1974-01-28, the same as the old ones, so Android keeps its
+     cached parse of the old GmsCore. In TWRP give them a current date:
+     ```
+     adb shell twrp mount /system_root
+     adb shell "blockdev --setrw /dev/block/dm-0; mount -o rw,remount /system_root"
+     adb shell "find /system_root/system/product /system_root/system/system_ext -type f -exec touch -d '2026-10-22 12:00:00' {} +"
+     adb shell "sync; mount -o ro,remount /system_root"
+     ```
+     then **Reboot → System** in the TWRP UI (`adb reboot` from TWRP comes back to recovery).
+   - `adb shell pm uninstall-system-updates com.google.android.gms` → Play services falls back to
+     the system 25.38.30 with `GET_ROLE_HOLDERS: granted=true`; the next Play Store update keeps it.
+   - Settings → Accounts → Google → Sync now.
+
 ### Always-on display — module `fold3-fold-config` (RRO + service.sh)
 - The GSI already sets `config_dozeComponent` (SystemUI DozeService) and `config_dozeAlwaysOnEnabled`,
   but `config_dozeAlwaysOnDisplayAvailable` was false. The RRO sets it (plus

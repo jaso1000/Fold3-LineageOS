@@ -219,6 +219,19 @@ Notes:
 > `READ_CONTACTS`, `WRITE_CONTACTS`, `READ_PHONE_STATE`). With BiTGApps, Android Auto may show
 > "error 22" (it needs to be a privileged system app, which MindTheGapps provides).
 
+> **Google apps not syncing after a fresh install?** (Calendar, Gmail, Photos stuck; `logcat` shows
+> `AUTH_SECURITY_ERROR` / "SecurityException while getting token".) Two fixes, no root needed:
+> 1. Grant Google Services Framework its permissions (MindTheGapps doesn't on a fresh install):
+>    `adb shell pm grant com.google.android.gsf android.permission.GET_ACCOUNTS`, and the same for
+>    `READ_CONTACTS`, `WRITE_CONTACTS` and `READ_PHONE_STATE`.
+> 2. Play services auto-updates to a version that needs the privileged `GET_ROLE_HOLDERS`
+>    permission, which the Play services inside MindTheGapps 20260915 doesn't request, so Android
+>    refuses it to the update. Once setup is done, flash
+>    [MindTheGapps 20261021](https://github.com/MindTheGapps/16.0.0-arm64/releases/tag/MindTheGapps-16.0.0-arm64-20261021_084306)
+>    over it in TWRP (Install Zip only, no wipe), refresh its file dates and reboot with TWRP's
+>    **Reboot → System**, then drop the stale update. Step-by-step in
+>    [notes/procedure.md](notes/procedure.md#google-sync-after-a-fresh-install-mindthegapps).
+
 **4. Optional: root, RCS**
 1. Root: extract `boot.img` from the **exact** firmware your phone runs (samloader), patch it with
    [Magisk](https://github.com/topjohnwu/Magisk), flash via Install Image → Boot. (A boot.img from any
