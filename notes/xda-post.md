@@ -81,7 +81,8 @@ Short version, in TWRP:
 [*]Fresh install: Format Data. Updating: skip, data is kept
 [*]Reboot
 [/LIST]
-If Google apps give trouble on a fresh install (setup loops, sign-in or Play Store fails): Format Data and try [URL='https://bitgapps.io']BiTGApps[/URL] Core instead of MindTheGapps, then grant GSF its permissions (details in the install guide). Android Auto may not work with BiTGApps.
+Use [URL='https://github.com/MindTheGapps/16.0.0-arm64/releases/tag/MindTheGapps-16.0.0-arm64-20260915_222150']MindTheGapps 20260915[/URL] for the install: the 20261021 release freezes setup on a fresh install.
+Fresh install and Google apps (Calendar, Gmail, Photos) don't sync? It's two known issues with a no-root fix: grant Google Services Framework its permissions, then after setup flash MindTheGapps 20261021 over the top and remove the Play services update. Step-by-step: [URL='https://github.com/jaso1000/Fold3-LineageOS/blob/master/notes/procedure.md#google-sync-after-a-fresh-install-mindthegapps']Google sync after a fresh install[/URL]
 Other carriers: add an APN with APN "ims", type "ims", protocol IPv4/IPv6 for VoLTE.
 
 How each fix works: [URL='https://github.com/jaso1000/Fold3-LineageOS/blob/master/rom/README.md']rom/README.md[/URL] · root causes: [URL='https://github.com/jaso1000/Fold3-LineageOS/blob/master/notes/procedure.md']notes/procedure.md[/URL]
